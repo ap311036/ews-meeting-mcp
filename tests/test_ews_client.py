@@ -13,11 +13,26 @@ class FakeMailbox:
     email_address: str
 
 
+class FakeConfig:
+    def __init__(self) -> None:
+        self.version = None
+
+
 class FakeProtocol:
     def __init__(self) -> None:
+        self.config = FakeConfig()
         self.calls: list[tuple[list[str], bool]] = []
+        self.version_accesses = 0
+
+    @property
+    def version(self) -> object:
+        self.version_accesses += 1
+        self.config.version = object()
+        return self.config.version
 
     def resolve_names(self, names: list[str], *, return_full_contact_data: bool) -> list[FakeMailbox]:
+        if self.config.version is None:
+            raise AttributeError("'NoneType' object has no attribute 'api_version'")
         self.calls.append((names, return_full_contact_data))
         if names == ["王小明"]:
             return [FakeMailbox(name="王小明", email_address="ming.wang@example.com")]
@@ -72,6 +87,7 @@ class EwsClientResolveTests(unittest.TestCase):
                 (["nobody"], True),
             ],
         )
+        self.assertEqual(account.protocol.version_accesses, 1)
 
 
 if __name__ == "__main__":

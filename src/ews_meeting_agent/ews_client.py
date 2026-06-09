@@ -169,7 +169,9 @@ class EwsClient:
         if not query:
             return []
 
-        resolutions = self.account.protocol.resolve_names(
+        protocol = self.account.protocol
+        _ensure_protocol_version(protocol)
+        resolutions = protocol.resolve_names(
             [query],
             return_full_contact_data=True,
         )
@@ -261,6 +263,16 @@ def _first_contact_email(contact: Any) -> str:
             if value:
                 return str(value)
     return ""
+
+
+def _ensure_protocol_version(protocol: Any) -> None:
+    config = getattr(protocol, "config", None)
+    if getattr(config, "version", None) is not None:
+        return
+
+    version = getattr(protocol, "version", None)
+    if config is not None and getattr(config, "version", None) is None and version is not None:
+        config.version = version
 
 
 def default_window(days: int, timezone_name: str = "Asia/Taipei") -> tuple[datetime, datetime]:
