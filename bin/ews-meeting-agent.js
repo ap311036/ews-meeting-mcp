@@ -151,6 +151,13 @@ Examples:
 `);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+function isDirectEntrypoint() {
+  if (!process.argv[1]) {
+    return false;
+  }
+  return fs.realpathSync(process.argv[1]) === __filename;
+}
+
+if (isDirectEntrypoint()) {
   main();
 }

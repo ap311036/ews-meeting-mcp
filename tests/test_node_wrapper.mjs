@@ -1,4 +1,8 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { test } from "node:test";
 import {
   buildPythonArgs,
@@ -26,4 +30,18 @@ test("default mode launches MCP server", () => {
 
 test("cli mode launches original Python CLI with passthrough args", () => {
   assert.deepEqual(buildPythonArgs(["--cli", "env"]), ["-m", "ews_meeting_agent.cli", "env"]);
+});
+
+test("bin entrypoint runs when invoked through an npm-style symlink", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "ews-meeting-mcp-bin-"));
+  const symlinkPath = path.join(tempDir, "ews-meeting-mcp");
+  const binPath = path.resolve("bin/ews-meeting-agent.js");
+  fs.symlinkSync(binPath, symlinkPath);
+
+  const result = spawnSync(process.execPath, [symlinkPath, "--help"], {
+    encoding: "utf8",
+  });
+
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /Start the MCP stdio server/);
 });
