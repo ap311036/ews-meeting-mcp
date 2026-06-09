@@ -3,6 +3,10 @@
   "version": "0.1.1",
   "description": "MCP server and CLI for scheduling meetings through on-prem Exchange EWS.",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ap311036/ews-meeting-mcp"
+  },
   "bin": {
     "ews-meeting-mcp": "bin/ews-meeting-agent.js"
   },
