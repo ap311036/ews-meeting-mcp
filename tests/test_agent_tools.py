@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 import unittest
 
 from ews_meeting_agent import agent_tools
@@ -8,16 +9,51 @@ from ews_meeting_agent import agent_tools
 class FakeClient:
     def __init__(self) -> None:
         self.calls: list[tuple[list[str], int]] = []
+        self.free_busy_calls: list[list[str]] = []
+        self.created_attendees: list[str] | None = None
 
     def resolve_attendees(self, attendees: list[str], *, limit: int = 5) -> list[dict[str, object]]:
         self.calls.append((attendees, limit))
-        return [
-            {
-                "query": "王小明",
-                "status": "resolved",
-                "matches": [{"name": "王小明", "email": "ming.wang@example.com"}],
-            }
-        ]
+        results: list[dict[str, object]] = []
+        for attendee in attendees:
+            if attendee == "Alex":
+                results.append(
+                    {
+                        "query": "Alex",
+                        "status": "ambiguous",
+                        "matches": [
+                            {"name": "Alex Chen", "email": "alex.chen@example.com"},
+                            {"name": "Alex Lin", "email": "alex.lin@example.com"},
+                        ],
+                    }
+                )
+            elif attendee == "nobody":
+                results.append({"query": "nobody", "status": "not_found", "matches": []})
+            elif "@" in attendee:
+                results.append(
+                    {
+                        "query": attendee,
+                        "status": "email",
+                        "matches": [{"name": attendee, "email": attendee}],
+                    }
+                )
+            else:
+                results.append(
+                    {
+                        "query": attendee,
+                        "status": "resolved",
+                        "matches": [{"name": attendee, "email": "ming.wang@example.com"}],
+                    }
+                )
+        return results
+
+    def get_free_busy(self, attendees: list[str], start: datetime, end: datetime) -> list[object]:
+        self.free_busy_calls.append(attendees)
+        return []
+
+    def create_meeting(self, request: object) -> dict[str, str]:
+        self.created_attendees = request.attendees
+        return {"id": "event-1", "changekey": "ck-1"}
 
 
 class AgentToolTests(unittest.TestCase):
@@ -32,6 +68,47 @@ class AgentToolTests(unittest.TestCase):
 
         self.assertEqual(client.calls, [(["王小明"], 3)])
         self.assertEqual(result[0]["matches"][0]["email"], "ming.wang@example.com")
+
+    def test_suggest_slots_resolves_names_before_free_busy_lookup(self) -> None:
+        client = FakeClient()
+
+        agent_tools.ews_suggest_slots(
+            attendees=["王小明"],
+            start="2026-06-15T10:00:00+08:00",
+            end="2026-06-15T11:00:00+08:00",
+            client_factory=lambda: client,
+        )
+
+        self.assertEqual(client.calls, [(["王小明"], 5)])
+        self.assertEqual(client.free_busy_calls, [["ming.wang@example.com"]])
+
+    def test_suggest_slots_reports_ambiguous_names_before_free_busy_lookup(self) -> None:
+        client = FakeClient()
+
+        with self.assertRaisesRegex(ValueError, "Alex.*alex.chen@example.com.*alex.lin@example.com"):
+            agent_tools.ews_suggest_slots(
+                attendees=["Alex"],
+                start="2026-06-15T10:00:00+08:00",
+                end="2026-06-15T11:00:00+08:00",
+                client_factory=lambda: client,
+            )
+
+        self.assertEqual(client.free_busy_calls, [])
+
+    def test_create_meeting_confirmed_resolves_names_before_creating(self) -> None:
+        client = FakeClient()
+
+        result = agent_tools.ews_create_meeting_confirmed(
+            subject="Sync",
+            attendees=["王小明"],
+            start="2026-06-15T10:00:00+08:00",
+            end="2026-06-15T11:00:00+08:00",
+            confirm=True,
+            client_factory=lambda: client,
+        )
+
+        self.assertEqual(result["preview"]["attendees"], ["ming.wang@example.com"])
+        self.assertEqual(client.created_attendees, ["ming.wang@example.com"])
 
 
 if __name__ == "__main__":

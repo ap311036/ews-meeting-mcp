@@ -166,7 +166,7 @@ Available and recommended tools for the agent:
 
 Do not pass EWS passwords through the LLM. The agent should call a local/internal tool that reads credentials from environment variables, Keychain, Vault, or another secret store.
 
-If a meeting request contains attendee names or aliases instead of complete email addresses, call `ews_resolve_attendees` first and use only the selected resolved emails for availability checks and meeting creation. If a name is ambiguous or not found, ask the user to choose or provide the exact email before continuing.
+If a meeting request contains attendee names or aliases instead of complete email addresses, call `ews_resolve_attendees` first and use only the selected resolved emails for availability checks and meeting creation. The scheduling and meeting tools also auto-resolve non-email attendees before calling EWS. If a name is ambiguous or not found, ask the user to choose or provide the exact email before continuing.
 
 ## MCP server
 

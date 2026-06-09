@@ -28,6 +28,7 @@ Use the `ews-meeting-mcp` MCP tools to schedule meetings through an on-prem Exch
 ## Tool Notes
 
 - Use `ews_resolve_attendees` whenever the user gives names, aliases, or mixed name/email attendee lists.
+- Scheduling and meeting tools also auto-resolve non-email attendees; if they report ambiguity or not found, ask the user to choose or provide the exact email.
 - Use multiple attendee emails in one `ews_suggest_slots` call.
 - Use `ews_get_free_busy` for diagnostics when slot suggestions look surprising.
 - Use `ews_list_calendar` to verify whether an event exists on the server calendar.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+import re
 from typing import Any, Callable
 
 from .config import EwsConfig
@@ -46,8 +47,10 @@ def ews_get_free_busy(
     end: str,
     client_factory: ClientFactory = default_client_factory,
 ) -> list[dict[str, str]]:
-    blocks = client_factory().get_free_busy(
-        attendees,
+    client = client_factory()
+    attendee_emails = _attendee_emails(attendees, client)
+    blocks = client.get_free_busy(
+        attendee_emails,
         datetime.fromisoformat(start),
         datetime.fromisoformat(end),
     )
@@ -69,7 +72,9 @@ def ews_suggest_slots(
     avoid = avoid or ["12:00-14:00"]
     window_start = datetime.fromisoformat(start)
     window_end = datetime.fromisoformat(end)
-    busy = client_factory().get_free_busy(attendees, window_start, window_end)
+    client = client_factory()
+    attendee_emails = _attendee_emails(attendees, client)
+    busy = client.get_free_busy(attendee_emails, window_start, window_end)
     slots = suggest_slots(
         busy,
         window_start,
@@ -91,7 +96,10 @@ def ews_create_meeting_preview(
     end: str,
     body: str = "",
     location: str = "",
+    client_factory: ClientFactory = default_client_factory,
 ) -> dict[str, Any]:
+    if _needs_resolution(attendees):
+        attendees = _attendee_emails(attendees, client_factory())
     request = _meeting_request(subject, attendees, start, end, body, location)
     return build_meeting_preview(request, confirmed=False)
 
@@ -110,9 +118,11 @@ def ews_create_meeting_confirmed(
     if confirm is not True:
         raise PermissionError("Refusing to create meeting without confirm=true")
 
-    request = _meeting_request(subject, attendees, start, end, body, location)
+    client = client_factory()
+    attendee_emails = _attendee_emails(attendees, client)
+    request = _meeting_request(subject, attendee_emails, start, end, body, location)
     preview = build_meeting_preview(request, confirmed=True)
-    created = client_factory().create_meeting(request)
+    created = client.create_meeting(request)
     return {"preview": preview, "created": created}
 
 
@@ -136,3 +146,56 @@ def _meeting_request(
 
 def _block_to_dict(block: Any) -> dict[str, str]:
     return {"start": str(block.start), "end": str(block.end)}
+
+
+def _needs_resolution(attendees: list[str]) -> bool:
+    return any(not _looks_like_email(attendee.strip()) for attendee in attendees)
+
+
+def _looks_like_email(value: str) -> bool:
+    return re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", value) is not None
+
+
+def _attendee_emails(attendees: list[str], client: EwsClient) -> list[str]:
+    cleaned = [attendee.strip() for attendee in attendees]
+    if not _needs_resolution(cleaned):
+        return cleaned
+
+    resolved = client.resolve_attendees(cleaned, limit=5)
+    emails: list[str] = []
+    for item in resolved:
+        query = str(item.get("query", ""))
+        status = str(item.get("status", ""))
+        matches = item.get("matches", [])
+        if not isinstance(matches, list):
+            matches = []
+
+        if status in {"email", "resolved"} and len(matches) == 1:
+            email = str(matches[0].get("email", "")).strip()
+            if _looks_like_email(email):
+                emails.append(email)
+                continue
+
+        if status == "ambiguous":
+            raise ValueError(
+                f"Attendee '{query}' is ambiguous. Ask the user to choose one email: "
+                f"{_format_matches(matches)}"
+            )
+
+        raise ValueError(f"Could not resolve attendee '{query}' to an email address.")
+
+    return emails
+
+
+def _format_matches(matches: list[object]) -> str:
+    labels: list[str] = []
+    for match in matches:
+        if not isinstance(match, dict):
+            continue
+        name = str(match.get("name", "")).strip()
+        email = str(match.get("email", "")).strip()
+        if name and email:
+            labels.append(f"{name} <{email}>")
+        elif email:
+            labels.append(email)
+    return ", ".join(labels) if labels else "no candidates returned"
