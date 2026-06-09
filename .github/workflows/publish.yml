@@ -27,16 +27,17 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           registry-url: https://registry.npmjs.org
+          package-manager-cache: false
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -65,8 +66,6 @@ jobs:
           fi
 
       - name: Publish to npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           package_name="$(node -p "require('./package.json').name")"
           package_version="$(node -p "require('./package.json').version")"
@@ -81,9 +80,4 @@ jobs:
             exit 0
           fi
 
-          if [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "::error::Missing NPM_TOKEN repository secret. Create an npm automation token and save it as NPM_TOKEN."
-            exit 1
-          fi
-
-          npm publish --access public --provenance
+          npm publish --access public
