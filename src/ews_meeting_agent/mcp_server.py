@@ -9,7 +9,7 @@ from typing import Any, Callable
 from . import agent_tools
 
 
-SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.0"}
+SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.1"}
 
 TOOL_HANDLERS: dict[str, Callable[..., Any]] = {
     "ews_probe": agent_tools.ews_probe,
@@ -101,7 +101,10 @@ def _meeting_schema(*, include_confirm: bool) -> dict[str, Any]:
     }
     required = ["subject", "attendees", "start", "end"]
     if include_confirm:
-        properties["confirm"] = {"type": "boolean", "const": True}
+        properties["confirm"] = {
+            "type": "boolean",
+            "description": "Must be true. The tool refuses to create meetings unless confirm=true.",
+        }
         required.append("confirm")
     return {
         "type": "object",

@@ -60,12 +60,25 @@ class McpServerTests(unittest.TestCase):
         self.assertTrue(response["result"]["isError"])
         self.assertIn("confirm=true", response["result"]["content"][0]["text"])
 
+    def test_tool_schemas_avoid_const_keyword_for_client_compatibility(self) -> None:
+        response = handle_request({"jsonrpc": "2.0", "id": 4, "method": "tools/list"})
+
+        schemas = [tool["inputSchema"] for tool in response["result"]["tools"]]
+        self.assertFalse(any(_contains_key(schema, "const") for schema in schemas))
+
 
 def _tool_payload(response: dict[str, object]) -> dict[str, object]:
     content = response["result"]["content"][0]["text"]
     return json.loads(content)
 
 
+def _contains_key(value: object, key: str) -> bool:
+    if isinstance(value, dict):
+        return key in value or any(_contains_key(item, key) for item in value.values())
+    if isinstance(value, list):
+        return any(_contains_key(item, key) for item in value)
+    return False
+
+
 if __name__ == "__main__":
     unittest.main()
-
