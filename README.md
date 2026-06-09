@@ -154,9 +154,9 @@ The `--confirm` flag is intentionally required. Without it, the command only pri
 
 ## Agent boundary
 
-Recommended tools for the eventual agent:
+Available and recommended tools for the agent:
 
-- `ews_resolve_attendee(name_or_email)`
+- `ews_resolve_attendees(attendees, limit)`
 - `ews_get_free_busy(attendees, start, end)`
 - `ews_list_my_calendar(start, end)`
 - `ews_suggest_meeting_slots(attendees, start, end, duration, constraints)`
@@ -165,6 +165,8 @@ Recommended tools for the eventual agent:
 - `ews_cancel_meeting(...)` guarded by human approval
 
 Do not pass EWS passwords through the LLM. The agent should call a local/internal tool that reads credentials from environment variables, Keychain, Vault, or another secret store.
+
+If a meeting request contains attendee names or aliases instead of complete email addresses, call `ews_resolve_attendees` first and use only the selected resolved emails for availability checks and meeting creation. If a name is ambiguous or not found, ask the user to choose or provide the exact email before continuing.
 
 ## MCP server
 

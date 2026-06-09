@@ -12,9 +12,21 @@ class McpServerTests(unittest.TestCase):
 
         self.assertEqual(response["id"], 1)
         tool_names = [tool["name"] for tool in response["result"]["tools"]]
+        self.assertIn("ews_resolve_attendees", tool_names)
         self.assertIn("ews_suggest_slots", tool_names)
         self.assertIn("ews_create_meeting_preview", tool_names)
         self.assertIn("ews_create_meeting_confirmed", tool_names)
+
+    def test_resolve_attendees_tool_schema_accepts_names_or_emails(self) -> None:
+        response = handle_request({"jsonrpc": "2.0", "id": 11, "method": "tools/list"})
+
+        tools = response["result"]["tools"]
+        tool = next(item for item in tools if item["name"] == "ews_resolve_attendees")
+
+        self.assertIn("company Exchange directory", tool["description"])
+        self.assertEqual(tool["inputSchema"]["required"], ["attendees"])
+        self.assertIn("attendees", tool["inputSchema"]["properties"])
+        self.assertIn("limit", tool["inputSchema"]["properties"])
 
     def test_preview_tool_does_not_send_invites(self) -> None:
         response = handle_request(

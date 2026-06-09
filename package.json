@@ -1,6 +1,6 @@
 {
   "name": "ews-meeting-mcp",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "MCP server and CLI for scheduling meetings through on-prem Exchange EWS.",
   "type": "module",
   "repository": {

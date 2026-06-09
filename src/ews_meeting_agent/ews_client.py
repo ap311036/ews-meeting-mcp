@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+import re
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -63,6 +64,34 @@ class EwsClient:
                 if status in {"busy", "tentative", "oof", "working_elsewhere"}:
                     busy.append(TimeBlock(event.start, event.end))
         return busy
+
+    def resolve_attendees(self, attendees: list[str], *, limit: int = 5) -> list[dict[str, Any]]:
+        results: list[dict[str, Any]] = []
+        match_limit = max(1, limit)
+
+        for attendee in attendees:
+            query = attendee.strip()
+            if _looks_like_email(query):
+                results.append(
+                    {
+                        "query": query,
+                        "status": "email",
+                        "matches": [{"name": query, "email": query, "source": "input"}],
+                    }
+                )
+                continue
+
+            matches = self._resolve_name(query)
+            status = _resolution_status(len(matches))
+            results.append(
+                {
+                    "query": query,
+                    "status": status,
+                    "matches": matches[:match_limit],
+                }
+            )
+
+        return results
 
     def create_meeting(self, request: MeetingRequest) -> dict[str, str]:
         request.validate()
@@ -136,6 +165,25 @@ class EwsClient:
             access_type=DELEGATE,
         )
 
+    def _resolve_name(self, query: str) -> list[dict[str, str]]:
+        if not query:
+            return []
+
+        resolutions = self.account.protocol.resolve_names(
+            [query],
+            return_full_contact_data=True,
+        )
+        matches: list[dict[str, str]] = []
+        seen_emails: set[str] = set()
+        for resolution in resolutions:
+            match = _resolution_to_match(resolution)
+            email = match.get("email", "").lower()
+            if not email or email in seen_emails:
+                continue
+            seen_emails.add(email)
+            matches.append(match)
+        return matches
+
     def _to_ews_datetime(self, value: datetime) -> Any:
         try:
             from exchangelib import EWSDateTime, EWSTimeZone
@@ -161,6 +209,58 @@ class EwsClient:
             local_value.microsecond,
             tzinfo=ews_timezone,
         )
+
+
+def _looks_like_email(value: str) -> bool:
+    return re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", value) is not None
+
+
+def _resolution_status(match_count: int) -> str:
+    if match_count == 0:
+        return "not_found"
+    if match_count == 1:
+        return "resolved"
+    return "ambiguous"
+
+
+def _resolution_to_match(resolution: Any) -> dict[str, str]:
+    mailbox = resolution[0] if isinstance(resolution, tuple) else resolution
+    contact = resolution[1] if isinstance(resolution, tuple) and len(resolution) > 1 else None
+
+    name = (
+        getattr(mailbox, "name", None)
+        or getattr(contact, "display_name", None)
+        or getattr(contact, "complete_name", None)
+        or ""
+    )
+    email = (
+        getattr(mailbox, "email_address", None)
+        or getattr(contact, "email_address", None)
+        or _first_contact_email(contact)
+        or ""
+    )
+    source = "directory"
+    return {
+        "name": str(name or email),
+        "email": str(email),
+        "source": source,
+    }
+
+
+def _first_contact_email(contact: Any) -> str:
+    if contact is None:
+        return ""
+
+    email_addresses = getattr(contact, "email_addresses", None)
+    if isinstance(email_addresses, dict):
+        for value in email_addresses.values():
+            if value:
+                return str(value)
+    if isinstance(email_addresses, (list, tuple)):
+        for value in email_addresses:
+            if value:
+                return str(value)
+    return ""
 
 
 def default_window(days: int, timezone_name: str = "Asia/Taipei") -> tuple[datetime, datetime]:

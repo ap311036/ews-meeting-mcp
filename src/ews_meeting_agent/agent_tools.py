@@ -30,6 +30,15 @@ def ews_list_calendar(
     return client.list_calendar(start, end)
 
 
+def ews_resolve_attendees(
+    *,
+    attendees: list[str],
+    limit: int = 5,
+    client_factory: ClientFactory = default_client_factory,
+) -> list[dict[str, Any]]:
+    return client_factory().resolve_attendees(attendees, limit=limit)
+
+
 def ews_get_free_busy(
     *,
     attendees: list[str],
@@ -127,4 +136,3 @@ def _meeting_request(
 
 def _block_to_dict(block: Any) -> dict[str, str]:
     return {"start": str(block.start), "end": str(block.end)}
-

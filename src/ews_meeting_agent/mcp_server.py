@@ -9,11 +9,12 @@ from typing import Any, Callable
 from . import agent_tools
 
 
-SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.2"}
+SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.3"}
 
 TOOL_HANDLERS: dict[str, Callable[..., Any]] = {
     "ews_probe": agent_tools.ews_probe,
     "ews_list_calendar": agent_tools.ews_list_calendar,
+    "ews_resolve_attendees": agent_tools.ews_resolve_attendees,
     "ews_get_free_busy": agent_tools.ews_get_free_busy,
     "ews_suggest_slots": agent_tools.ews_suggest_slots,
     "ews_create_meeting_preview": agent_tools.ews_create_meeting_preview,
@@ -51,8 +52,9 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
                 "capabilities": {"tools": {}},
                 "serverInfo": SERVER_INFO,
                 "instructions": (
-                    "Use ews_suggest_slots first. Before sending invitations, show the preview "
-                    "from ews_create_meeting_preview and ask the user to confirm."
+                    "Resolve non-email attendee names with ews_resolve_attendees before scheduling. "
+                    "Use ews_suggest_slots with resolved email addresses. Before sending invitations, "
+                    "show the preview from ews_create_meeting_preview and ask the user to confirm."
                 ),
             },
         )
@@ -127,6 +129,23 @@ def _free_busy_schema() -> dict[str, Any]:
     }
 
 
+def _resolve_attendees_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "properties": {
+            "attendees": {
+                "type": "array",
+                "items": {"type": "string"},
+                "minItems": 1,
+                "description": "Attendee display names, aliases, or email addresses.",
+            },
+            "limit": {"type": "integer", "default": 5, "minimum": 1},
+        },
+        "required": ["attendees"],
+        "additionalProperties": False,
+    }
+
+
 def _suggest_schema() -> dict[str, Any]:
     schema = _free_busy_schema()
     schema["properties"].update(
@@ -160,6 +179,15 @@ def _tool_defs() -> list[dict[str, Any]]:
                 "properties": {"days": {"type": "integer", "default": 7, "minimum": 1}},
                 "additionalProperties": False,
             },
+        },
+        {
+            "name": "ews_resolve_attendees",
+            "description": (
+                "Resolve attendee names, aliases, or email addresses against the company Exchange "
+                "directory before scheduling. If multiple matches are returned, ask the user which "
+                "email to use."
+            ),
+            "inputSchema": _resolve_attendees_schema(),
         },
         {
             "name": "ews_get_free_busy",
