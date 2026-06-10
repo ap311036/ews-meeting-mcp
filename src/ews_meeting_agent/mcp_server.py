@@ -12,7 +12,7 @@ from .confirmations import ConfirmationLedger
 from .errors import EwsToolError
 
 
-SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.13"}
+SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.14"}
 
 TOOL_HANDLERS: dict[str, Callable[..., Any]] = {
     "ews_keychain_status": agent_tools.ews_keychain_status,
@@ -159,6 +159,12 @@ def _meeting_schema(*, include_confirm: bool) -> dict[str, Any]:
         "start": {"type": "string", "description": "ISO datetime with timezone"},
         "end": {"type": "string", "description": "ISO datetime with timezone"},
         "body": {"type": "string", "default": ""},
+        "body_format": {
+            "type": "string",
+            "enum": ["html", "text"],
+            "default": "html",
+            "description": "Meeting body format. Defaults to html; plain text input is safely converted to HTML.",
+        },
         "location": {"type": "string", "default": ""},
     }
     required = ["subject", "attendees", "start", "end"]
@@ -234,6 +240,12 @@ def _meeting_update_schema(*, include_confirm: bool) -> dict[str, Any]:
         "end": {"type": "string", "description": "Optional replacement ISO datetime with timezone."},
         "location": {"type": "string", "description": "Optional replacement location."},
         "body": {"type": "string", "description": "Optional replacement body."},
+        "body_format": {
+            "type": "string",
+            "enum": ["html", "text"],
+            "default": "html",
+            "description": "Format for body updates. Defaults to html; plain text input is safely converted to HTML.",
+        },
         "send_meeting_invitations": {
             "type": "boolean",
             "default": True,

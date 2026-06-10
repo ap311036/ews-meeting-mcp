@@ -514,6 +514,32 @@ class EwsClientResolveTests(unittest.TestCase):
         )
         self.assertEqual(result["changekey"], "ck-2")
 
+    def test_update_meeting_body_defaults_to_safe_html(self) -> None:
+        item = FakeMeetingItem()
+        client = EwsClient(
+            EwsConfig(
+                endpoint="https://ews.example.com/EWS/Exchange.asmx",
+                email="organizer@example.com",
+                username="organizer",
+                password="secret",
+            )
+        )
+        client._account = FakeCalendarAccount([item])
+
+        client.update_meeting(
+            "event-1",
+            "ck-1",
+            {"body": "PRD: https://wiki.example.com/prd/123\n<script>alert(1)</script>"},
+            update_fields=["body"],
+            send_meeting_invitations=True,
+        )
+
+        rendered = str(item.body)
+        self.assertIn("<p>PRD: ", rendered)
+        self.assertIn('<a href="https://wiki.example.com/prd/123">https://wiki.example.com/prd/123</a>', rendered)
+        self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", rendered)
+        self.assertNotIn("<script>", rendered)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -23,7 +23,7 @@ class FakeClient:
         self.created_rooms: list[str] | None = None
         self.fetched_events: list[tuple[str, str]] = []
         self.cancelled_events: list[tuple[str, str, bool]] = []
-        self.updated_events: list[tuple[str, str, dict[str, object], list[str], bool]] = []
+        self.updated_events: list[tuple[str, str, dict[str, object], list[str], bool, str]] = []
         self.created_meetings = 0
         self.event = {
             "id": "event-1",
@@ -156,8 +156,9 @@ class FakeClient:
         *,
         update_fields: list[str],
         send_meeting_invitations: bool,
+        body_format: str = "html",
     ) -> dict[str, object]:
-        self.updated_events.append((item_id, changekey, updates, update_fields, send_meeting_invitations))
+        self.updated_events.append((item_id, changekey, updates, update_fields, send_meeting_invitations, body_format))
         changed = dict(self.event)
         changed.update(updates)
         changed["changekey"] = "ck-2"
@@ -1212,6 +1213,7 @@ class AgentToolTests(unittest.TestCase):
                     {"subject": "New sync", "location": "Room B", "body": "new body"},
                     ["subject", "location", "body"],
                     True,
+                    "html",
                 )
             ],
         )

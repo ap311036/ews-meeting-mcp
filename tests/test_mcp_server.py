@@ -534,6 +534,18 @@ class McpServerTests(unittest.TestCase):
         self.assertIn("confirm", tools["ews_cancel_meeting_confirmed"]["inputSchema"]["required"])
         self.assertIn("confirmation_id", tools["ews_cancel_meeting_confirmed"]["inputSchema"]["required"])
 
+    def test_meeting_schemas_default_body_format_to_html(self) -> None:
+        response = handle_request({"jsonrpc": "2.0", "id": 29, "method": "tools/list"})
+
+        tools = {tool["name"]: tool for tool in response["result"]["tools"]}
+        create_body_format = tools["ews_create_meeting_preview"]["inputSchema"]["properties"]["body_format"]
+        update_body_format = tools["ews_update_meeting_preview"]["inputSchema"]["properties"]["body_format"]
+
+        self.assertEqual(create_body_format["default"], "html")
+        self.assertEqual(create_body_format["enum"], ["html", "text"])
+        self.assertEqual(update_body_format["default"], "html")
+        self.assertEqual(update_body_format["enum"], ["html", "text"])
+
     def test_update_confirmed_false_returns_structured_confirmation_error(self) -> None:
         response = handle_request(
             {

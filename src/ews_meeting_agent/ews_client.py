@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 
 from .config import EwsConfig
 from .errors import EwsToolError
-from .meeting import MeetingRequest
+from .meeting import MeetingRequest, render_body_for_format
 from .scheduler import TimeBlock
 
 
@@ -209,7 +209,7 @@ class EwsClient:
             account=self.account,
             folder=self.account.calendar,
             subject=request.subject,
-            body=request.body,
+            body=_ews_body(render_body_for_format(request.body, request.body_format), request.body_format),
             start=self._to_ews_datetime(request.start),
             end=self._to_ews_datetime(request.end),
             location=request.location,
@@ -280,12 +280,15 @@ class EwsClient:
         *,
         update_fields: list[str],
         send_meeting_invitations: bool,
+        body_format: str = "html",
     ) -> dict[str, Any]:
         item = self._get_calendar_item(item_id, changekey)
         for field in update_fields:
             value = updates[field]
             if field in {"start", "end"}:
                 value = self._to_ews_datetime(_coerce_datetime(value))
+            elif field == "body":
+                value = _ews_body(render_body_for_format(str(value), body_format), body_format)
             setattr(item, field, value)
         item.save(
             update_fields=update_fields,
@@ -528,6 +531,16 @@ def _send_disposition(enabled: bool) -> str:
     except ImportError:
         SEND_TO_ALL_AND_SAVE_COPY = "SendToAllAndSaveCopy"
     return SEND_TO_ALL_AND_SAVE_COPY
+
+
+def _ews_body(body: str, body_format: str) -> object:
+    if body_format == "html":
+        try:
+            from exchangelib import HTMLBody
+        except ImportError:
+            return body
+        return HTMLBody(body)
+    return body
 
 
 def _resolution_to_match(resolution: Any) -> dict[str, str]:

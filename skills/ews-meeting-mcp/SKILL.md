@@ -54,6 +54,7 @@ Use the `ews-meeting-mcp` MCP tools to schedule meetings through an on-prem Exch
 - Use multiple attendee emails and candidate room aliases in one `ews_suggest_slots` call.
 - Use `require_room: true` when the user wants a room but does not specify which room.
 - To schedule with a room, pass the selected room in `rooms` to both preview and confirmed meeting tools. The room is sent as an Exchange resource, not as a required attendee.
+- Meeting body defaults to `body_format: "html"`. You may turn a user-provided agenda into concise HTML, including clickable PRD/Wiki links. Plain text bodies are also accepted and are safely converted to HTML with line breaks and URL anchors.
 - Use `ews_get_free_busy` for diagnostics when slot suggestions look surprising.
 - Use `ews_list_calendar` to verify whether an event exists on the server calendar.
 - Use `ews_find_calendar_events` before update or cancel because it returns stable item metadata (`id`, `changekey`, `uid`, attendees, resources, organizer, meeting/cancelled/recurrence flags) needed for safe lifecycle tools.

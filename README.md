@@ -241,6 +241,8 @@ If the user needs to choose a room, call `ews_list_rooms` first and present its 
 
 For new meetings, call `ews_create_meeting_preview`, show the exact invite details and returned `confirmation_id`, then call `ews_create_meeting_confirmed` only after explicit user approval with `confirm: true` and the same `confirmation_id`. Confirmed create, update, and cancel operations are recorded in a small local confirmation ledger under `EWS_MEETING_AGENT_STATE_DIR` when set, or the user's local state/cache directory otherwise. The ledger stores operation metadata only, not passwords. If a confirmed tool returns `error_code: "duplicate_confirmation"`, treat the prior operation as already handled, inspect `prior_result`, and do not retry blindly.
 
+Meeting bodies default to `body_format: "html"`. If the body is plain text, the tool safely converts it to simple HTML, preserves line breaks, escapes raw markup, and turns `http://` or `https://` URLs such as PRD or Wiki links into clickable anchors. Agents may also pass intentional HTML directly, or set `body_format: "text"` when a plain text body is explicitly required.
+
 Lifecycle-sensitive preview, confirmed, duplicate, in-progress, and structured error outcomes are also appended to a local JSON Lines audit log named `audit-log.jsonl` in the same state directory. The audit log stores meeting metadata such as confirmation id, item id/changekey/uid, subject, time, location, attendees, resources, and structured error codes; it does not store EWS passwords or raw environment values. Use `ews_get_audit_log(limit, action, status)` to inspect recent entries without reading the file manually. Audit write failures are best-effort warnings and do not block meeting preview/create/update/cancel operations.
 
 After a confirmed create or update, call `ews_verify_meeting` with the returned EWS item `id` and `changekey` when available. It reads the organizer calendar item and returns normalized attendees, rooms/resources, and `response_status` values. Room response status can be `unknown` immediately after creation if Exchange has not exposed the room mailbox response yet; treat that as pending/unknown, not as verification failure.
@@ -314,7 +316,7 @@ MCP config for an npm-published package:
   "mcpServers": {
     "ews-meeting-mcp": {
       "command": "npx",
-      "args": ["-y", "ews-meeting-mcp@0.1.13"],
+      "args": ["-y", "ews-meeting-mcp@0.1.14"],
       "env": {
         "EWS_ENDPOINT": "https://mail.company.com/EWS/Exchange.asmx",
         "EWS_EMAIL": "your_user@company.com",

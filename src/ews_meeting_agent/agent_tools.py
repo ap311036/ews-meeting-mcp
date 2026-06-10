@@ -284,6 +284,7 @@ def ews_create_meeting_preview(
     start: str,
     end: str,
     body: str = "",
+    body_format: str = "html",
     location: str = "",
     client_factory: ClientFactory = default_client_factory,
 ) -> dict[str, Any]:
@@ -294,6 +295,7 @@ def ews_create_meeting_preview(
         "start": start,
         "end": end,
         "body": body,
+        "body_format": body_format,
         "location": location,
     }
     try:
@@ -309,7 +311,7 @@ def ews_create_meeting_preview(
         room_emails = [room["email"] for room in room_infos]
         if not location and room_infos:
             location = room_infos[0]["name"]
-        request = _meeting_request(subject, attendees, room_emails, start, end, body, location)
+        request = _meeting_request(subject, attendees, room_emails, start, end, body, body_format, location)
         preview = build_meeting_preview(request, confirmed=False)
         preview["confirmation_id"] = _confirmation_id("create_meeting", preview)
         warning = _record_lifecycle_audit(action="create_meeting", status="preview", arguments=arguments, result=preview)
@@ -334,6 +336,7 @@ def ews_create_meeting_confirmed(
     start: str,
     end: str,
     body: str = "",
+    body_format: str = "html",
     location: str = "",
     confirmation_id: str = "",
     confirm: bool = False,
@@ -346,6 +349,7 @@ def ews_create_meeting_confirmed(
         "start": start,
         "end": end,
         "body": body,
+        "body_format": body_format,
         "location": location,
         "confirmation_id": confirmation_id,
         "confirm": confirm,
@@ -364,7 +368,7 @@ def ews_create_meeting_confirmed(
             room_emails = [room["email"] for room in room_infos]
             if not location and room_infos:
                 location = room_infos[0]["name"]
-            request = _meeting_request(subject, attendee_emails, room_emails, start, end, body, location)
+            request = _meeting_request(subject, attendee_emails, room_emails, start, end, body, body_format, location)
             preview = build_meeting_preview(request, confirmed=False)
             preview["confirmation_id"] = _confirmation_id("create_meeting", preview)
             _require_confirmation_id(confirmation_id, str(preview["confirmation_id"]))
@@ -408,6 +412,7 @@ def ews_update_meeting_preview(
     end: str | None = None,
     location: str | None = None,
     body: str | None = None,
+    body_format: str = "html",
     send_meeting_invitations: bool = True,
     client_factory: ClientFactory = default_client_factory,
 ) -> dict[str, Any]:
@@ -419,6 +424,7 @@ def ews_update_meeting_preview(
         "end": end,
         "location": location,
         "body": body,
+        "body_format": body_format,
         "send_meeting_invitations": send_meeting_invitations,
     }
     try:
@@ -434,6 +440,7 @@ def ews_update_meeting_preview(
             "current_event": current,
             "proposed_event": proposed,
             "updates": updates,
+            "body_format": body_format if body is not None else None,
             "warnings": _update_warnings(updates),
         }
         preview["confirmation_id"] = _confirmation_id("update_meeting", preview)
@@ -461,6 +468,7 @@ def ews_update_meeting_confirmed(
     end: str | None = None,
     location: str | None = None,
     body: str | None = None,
+    body_format: str = "html",
     confirm: bool = False,
     send_meeting_invitations: bool = True,
     client_factory: ClientFactory = default_client_factory,
@@ -474,6 +482,7 @@ def ews_update_meeting_confirmed(
         "end": end,
         "location": location,
         "body": body,
+        "body_format": body_format,
         "confirm": confirm,
         "send_meeting_invitations": send_meeting_invitations,
     }
@@ -493,6 +502,7 @@ def ews_update_meeting_confirmed(
                 end=end,
                 location=location,
                 body=body,
+                body_format=body_format,
                 send_meeting_invitations=send_meeting_invitations,
                 client_factory=client_factory,
             )
@@ -518,6 +528,7 @@ def ews_update_meeting_confirmed(
             changekey,
             updates,
             update_fields=update_fields,
+            body_format=body_format,
             send_meeting_invitations=send_meeting_invitations,
         )
         result = {
@@ -665,6 +676,7 @@ def _meeting_request(
     start: str,
     end: str,
     body: str,
+    body_format: str,
     location: str,
 ) -> MeetingRequest:
     return MeetingRequest(
@@ -674,6 +686,7 @@ def _meeting_request(
         start=datetime.fromisoformat(start),
         end=datetime.fromisoformat(end),
         body=body,
+        body_format=body_format,
         location=location,
     )
 
