@@ -24,6 +24,7 @@ class McpServerTests(unittest.TestCase):
         tool = next(item for item in tools if item["name"] == "ews_suggest_slots")
 
         self.assertIn("rooms", tool["inputSchema"]["properties"])
+        self.assertIn("require_room", tool["inputSchema"]["properties"])
 
     def test_resolve_attendees_tool_schema_accepts_names_or_emails(self) -> None:
         response = handle_request({"jsonrpc": "2.0", "id": 11, "method": "tools/list"})

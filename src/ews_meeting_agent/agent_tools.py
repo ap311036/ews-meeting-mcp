@@ -12,13 +12,25 @@ from .scheduler import TimeBlock, overlaps, parse_time_range, suggest_slots
 
 ClientFactory = Callable[[], EwsClient]
 
-KNOWN_ROOMS: dict[str, dict[str, str]] = {
+KNOWN_ROOMS: dict[str, dict[str, Any]] = {
     "2-11": {"name": "2-11 Meeting Room", "email": "2-11MeetingRoom@linebank.com.tw"},
     "2-13": {"name": "2-13 Meeting Room", "email": "2-13MeetingRoom@linebank.com.tw"},
     "2-14": {"name": "2-14 Meeting Room", "email": "2-14MeetingRoom@linebank.com.tw"},
-    "3-1": {"name": "3-1 Meeting Room(12P)", "email": "3-1MeetingRoom@linebank.com.tw"},
-    "3-2": {"name": "3-2 Meeting Room(6P)", "email": "3-2MeetingRoom@linebank.com.tw"},
-    "3-4": {"name": "3-4 Meeting Room(6P)", "email": "3-4MeetingRoom@linebank.com.tw"},
+    "3-1": {
+        "name": "3-1 Meeting Room(12P)",
+        "email": "3-1MeetingRoom@linebank.com.tw",
+        "capacity": 12,
+    },
+    "3-2": {
+        "name": "3-2 Meeting Room(6P)",
+        "email": "3-2MeetingRoom@linebank.com.tw",
+        "capacity": 6,
+    },
+    "3-4": {
+        "name": "3-4 Meeting Room(6P)",
+        "email": "3-4MeetingRoom@linebank.com.tw",
+        "capacity": 6,
+    },
 }
 
 
@@ -49,6 +61,10 @@ def ews_resolve_attendees(
     return client_factory().resolve_attendees(attendees, limit=limit)
 
 
+def default_room_options() -> list[dict[str, Any]]:
+    return [dict(room) for room in KNOWN_ROOMS.values()]
+
+
 def ews_get_free_busy(
     *,
     attendees: list[str],
@@ -70,6 +86,7 @@ def ews_suggest_slots(
     *,
     attendees: list[str],
     rooms: list[str] | None = None,
+    require_room: bool = False,
     start: str,
     end: str,
     duration_minutes: int = 30,
@@ -85,7 +102,8 @@ def ews_suggest_slots(
     client = client_factory()
     attendee_emails = _attendee_emails(attendees, client)
     busy = client.get_free_busy(attendee_emails, window_start, window_end)
-    room_infos = _room_infos(rooms or [], client)
+    room_infos = _room_infos(rooms or [], client, use_default=require_room)
+    room_infos = _rooms_with_capacity(room_infos, attendee_count=len(attendee_emails))
     slot_limit = 1000 if room_infos else limit
     slots = suggest_slots(
         busy,
@@ -115,6 +133,7 @@ def ews_suggest_slots(
         if available_rooms:
             payload = _block_to_dict(slot)
             payload["available_rooms"] = available_rooms
+            payload["attendee_count"] = len(attendee_emails)
             suggestions.append(payload)
         if len(suggestions) >= limit:
             break
@@ -236,8 +255,16 @@ def _attendee_emails(attendees: list[str], client: EwsClient) -> list[str]:
     return emails
 
 
-def _room_infos(rooms: list[str], client: EwsClient) -> list[dict[str, str]]:
-    room_infos: list[dict[str, str]] = []
+def _room_infos(
+    rooms: list[str],
+    client: EwsClient | None,
+    *,
+    use_default: bool = False,
+) -> list[dict[str, Any]]:
+    if use_default and not rooms:
+        return default_room_options()
+
+    room_infos: list[dict[str, Any]] = []
     unresolved: list[str] = []
     for room in rooms:
         query = room.strip()
@@ -247,7 +274,7 @@ def _room_infos(rooms: list[str], client: EwsClient) -> list[dict[str, str]]:
         if known_room:
             room_infos.append(dict(known_room))
         elif _looks_like_email(query):
-            room_infos.append({"name": query, "email": query})
+            room_infos.append({"name": query, "email": query, "capacity": _room_capacity(query)})
         else:
             unresolved.append(query)
 
@@ -274,9 +301,9 @@ def _room_key(value: str) -> str:
     return match.group(1) if match else value.strip()
 
 
-def _resolved_room_infos(rooms: list[str], client: EwsClient) -> list[dict[str, str]]:
+def _resolved_room_infos(rooms: list[str], client: EwsClient) -> list[dict[str, Any]]:
     resolved = client.resolve_attendees(rooms, limit=5)
-    room_infos: list[dict[str, str]] = []
+    room_infos: list[dict[str, Any]] = []
     for item in resolved:
         query = str(item.get("query", ""))
         status = str(item.get("status", ""))
@@ -287,7 +314,7 @@ def _resolved_room_infos(rooms: list[str], client: EwsClient) -> list[dict[str, 
             name = str(matches[0].get("name", "")).strip() or query
             email = str(matches[0].get("email", "")).strip()
             if _looks_like_email(email):
-                room_infos.append({"name": name, "email": email})
+                room_infos.append({"name": name, "email": email, "capacity": _room_capacity(name)})
                 continue
         if status == "ambiguous":
             raise ValueError(
@@ -298,8 +325,8 @@ def _resolved_room_infos(rooms: list[str], client: EwsClient) -> list[dict[str, 
     return room_infos
 
 
-def _dedupe_rooms(rooms: list[dict[str, str]]) -> list[dict[str, str]]:
-    deduped: list[dict[str, str]] = []
+def _dedupe_rooms(rooms: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    deduped: list[dict[str, Any]] = []
     seen: set[str] = set()
     for room in rooms:
         email = room["email"].lower()
@@ -308,6 +335,21 @@ def _dedupe_rooms(rooms: list[dict[str, str]]) -> list[dict[str, str]]:
         seen.add(email)
         deduped.append(room)
     return deduped
+
+
+def _rooms_with_capacity(rooms: list[dict[str, Any]], *, attendee_count: int) -> list[dict[str, Any]]:
+    filtered: list[dict[str, Any]] = []
+    for room in rooms:
+        capacity = room.get("capacity")
+        if isinstance(capacity, int) and capacity < attendee_count:
+            continue
+        filtered.append(room)
+    return filtered
+
+
+def _room_capacity(name: str) -> int | None:
+    match = re.search(r"\((\d+)P\)", name)
+    return int(match.group(1)) if match else None
 
 
 def _format_matches(matches: list[object]) -> str:

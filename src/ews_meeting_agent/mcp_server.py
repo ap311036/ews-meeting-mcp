@@ -9,7 +9,7 @@ from typing import Any, Callable
 from . import agent_tools
 
 
-SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.6"}
+SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.7"}
 
 TOOL_HANDLERS: dict[str, Callable[..., Any]] = {
     "ews_probe": agent_tools.ews_probe,
@@ -162,6 +162,11 @@ def _suggest_schema() -> dict[str, Any]:
                 "items": {"type": "string"},
                 "default": [],
                 "description": "Candidate meeting rooms. Supports aliases like 2-11, 2-13, 2-14, 3-1, 3-2, 3-4.",
+            },
+            "require_room": {
+                "type": "boolean",
+                "default": False,
+                "description": "When true and rooms is empty, search all built-in rooms and filter by capacity.",
             },
             "duration_minutes": {"type": "integer", "default": 30, "minimum": 1},
             "limit": {"type": "integer", "default": 5, "minimum": 1},

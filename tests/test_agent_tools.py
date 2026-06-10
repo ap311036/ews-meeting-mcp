@@ -72,6 +72,7 @@ class FakeClient:
             "2-11MeetingRoom@linebank.com.tw": [],
             "2-13MeetingRoom@linebank.com.tw": [],
             "2-14MeetingRoom@linebank.com.tw": [],
+            "3-4MeetingRoom@linebank.com.tw": [],
         }
 
     def create_meeting(self, request: object) -> dict[str, str]:
@@ -137,6 +138,40 @@ class AgentToolTests(unittest.TestCase):
             [room["email"] for room in result[1]["available_rooms"]],
         )
 
+    def test_suggest_slots_can_use_default_rooms_when_room_is_required(self) -> None:
+        client = FakeClient()
+
+        result = agent_tools.ews_suggest_slots(
+            attendees=["A", "B", "C", "D", "E", "F", "G"],
+            require_room=True,
+            start="2026-06-15T10:00:00+08:00",
+            end="2026-06-15T11:00:00+08:00",
+            duration_minutes=30,
+            limit=1,
+            client_factory=lambda: client,
+        )
+
+        room_emails = [room["email"] for room in result[0]["available_rooms"]]
+        self.assertIn("3-1MeetingRoom@linebank.com.tw", room_emails)
+        self.assertNotIn("3-2MeetingRoom@linebank.com.tw", room_emails)
+        self.assertNotIn("3-4MeetingRoom@linebank.com.tw", room_emails)
+        self.assertEqual(result[0]["attendee_count"], 7)
+
+    def test_suggest_slots_without_room_requirement_keeps_existing_behavior(self) -> None:
+        client = FakeClient()
+
+        result = agent_tools.ews_suggest_slots(
+            attendees=["A", "B"],
+            start="2026-06-15T10:00:00+08:00",
+            end="2026-06-15T11:00:00+08:00",
+            duration_minutes=30,
+            limit=1,
+            client_factory=lambda: client,
+        )
+
+        self.assertNotIn("available_rooms", result[0])
+        self.assertEqual(client.free_busy_by_attendee_calls, [])
+
     def test_suggest_slots_reports_ambiguous_names_before_free_busy_lookup(self) -> None:
         client = FakeClient()
 
@@ -183,6 +218,13 @@ class AgentToolTests(unittest.TestCase):
 
         self.assertEqual(result["rooms"], ["2-11MeetingRoom@linebank.com.tw"])
         self.assertEqual(result["location"], "2-11 Meeting Room")
+
+    def test_known_room_metadata_includes_capacity_when_name_declares_people(self) -> None:
+        rooms = agent_tools.default_room_options()
+
+        room_by_email = {room["email"]: room for room in rooms}
+        self.assertEqual(room_by_email["3-1MeetingRoom@linebank.com.tw"]["capacity"], 12)
+        self.assertEqual(room_by_email["3-2MeetingRoom@linebank.com.tw"]["capacity"], 6)
 
 
 if __name__ == "__main__":

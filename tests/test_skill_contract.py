@@ -14,6 +14,9 @@ class SkillContractTests(unittest.TestCase):
         self.assertIn("ews_resolve_attendees", text)
         self.assertIn("not a complete email address", text)
         self.assertIn("ask the user to choose", text)
+        self.assertIn("ask whether a meeting room is needed", text)
+        self.assertIn("require_room", text)
+        self.assertIn("capacity", text)
 
 
 if __name__ == "__main__":
