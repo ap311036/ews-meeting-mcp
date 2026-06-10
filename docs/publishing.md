@@ -21,8 +21,8 @@ For internal company use, prefer a scoped name or a private registry, for exampl
 5. Create and push a matching tag, for example:
 
 ```bash
-git tag v0.1.15
-git push origin master v0.1.15
+git tag v0.1.16
+git push origin master v0.1.16
 ```
 
 The workflow validates Python tests, Node wrapper tests, and `npm pack --dry-run` before publishing.
