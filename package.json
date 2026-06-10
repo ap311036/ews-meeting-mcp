@@ -1,6 +1,6 @@
 {
   "name": "ews-meeting-mcp",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "MCP server and CLI for scheduling meetings through on-prem Exchange EWS.",
   "type": "module",
   "repository": {
@@ -12,6 +12,7 @@
   },
   "files": [
     "bin/",
+    "scripts/*.py",
     "src/**/*.py",
     "skills/**/SKILL.md",
     "README.md",
@@ -24,6 +25,7 @@
     "test": "node --test tests/test_node_wrapper.mjs && env PYTHONPATH=src python3 -m unittest discover -s tests",
     "test:python": "env PYTHONPATH=src python3 -m unittest discover -s tests",
     "test:node": "node --test tests/test_node_wrapper.mjs",
+    "live-smoke": "env PYTHONPATH=src python3 scripts/live_smoke.py",
     "pack:check": "npm pack --dry-run"
   },
   "keywords": [
