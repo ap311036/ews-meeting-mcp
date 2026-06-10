@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import unittest
+from unittest.mock import patch
 
 from ews_meeting_agent.mcp_server import handle_request
 
@@ -12,10 +13,44 @@ class McpServerTests(unittest.TestCase):
 
         self.assertEqual(response["id"], 1)
         tool_names = [tool["name"] for tool in response["result"]["tools"]]
+        self.assertIn("ews_keychain_status", tool_names)
         self.assertIn("ews_resolve_attendees", tool_names)
         self.assertIn("ews_suggest_slots", tool_names)
         self.assertIn("ews_create_meeting_preview", tool_names)
         self.assertIn("ews_create_meeting_confirmed", tool_names)
+
+    def test_keychain_status_tool_has_empty_schema(self) -> None:
+        response = handle_request({"jsonrpc": "2.0", "id": 10, "method": "tools/list"})
+
+        tools = response["result"]["tools"]
+        tool = next(item for item in tools if item["name"] == "ews_keychain_status")
+
+        self.assertIn("without revealing the password", tool["description"])
+        self.assertEqual(tool["inputSchema"], {"type": "object", "properties": {}, "additionalProperties": False})
+
+    def test_keychain_status_tool_returns_status_payload(self) -> None:
+        with patch("ews_meeting_agent.agent_tools.keychain_status") as status:
+            status.return_value = {
+                "configured": False,
+                "source": "missing",
+                "service": "ews-meeting-mcp",
+                "account": "bk00325",
+                "setup_command": "security add-generic-password ...",
+            }
+
+            response = handle_request(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 13,
+                    "method": "tools/call",
+                    "params": {"name": "ews_keychain_status", "arguments": {}},
+                }
+            )
+
+        payload = _tool_payload(response)
+        self.assertFalse(payload["configured"])
+        self.assertEqual(payload["source"], "missing")
+        self.assertIn("setup_command", payload)
 
     def test_suggest_slots_tool_schema_accepts_rooms(self) -> None:
         response = handle_request({"jsonrpc": "2.0", "id": 12, "method": "tools/list"})

@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import re
 from typing import Any, Callable
 
-from .config import EwsConfig
+from .config import EwsConfig, keychain_status
 from .ews_client import EwsClient, default_window
 from .meeting import MeetingRequest, build_meeting_preview
 from .scheduler import TimeBlock, overlaps, parse_time_range, suggest_slots
@@ -36,6 +36,10 @@ KNOWN_ROOMS: dict[str, dict[str, Any]] = {
 
 def default_client_factory() -> EwsClient:
     return EwsClient(EwsConfig.from_env())
+
+
+def ews_keychain_status() -> dict[str, object]:
+    return keychain_status()
 
 
 def ews_probe(client_factory: ClientFactory = default_client_factory) -> dict[str, str]:

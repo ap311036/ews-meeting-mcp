@@ -174,15 +174,16 @@ The `--confirm` flag is intentionally required. Without it, the command only pri
 
 Available and recommended tools for the agent:
 
+- `ews_keychain_status()`
+- `ews_probe()`
 - `ews_resolve_attendees(attendees, limit)`
 - `ews_get_free_busy(attendees, start, end)`
-- `ews_list_my_calendar(start, end)`
-- `ews_suggest_meeting_slots(attendees, rooms, start, end, duration, constraints)`
-- `ews_create_meeting(...)` guarded by human approval
-- `ews_update_meeting(...)` guarded by human approval
-- `ews_cancel_meeting(...)` guarded by human approval
+- `ews_list_calendar(days)`
+- `ews_suggest_slots(attendees, rooms, require_room, start, end, duration_minutes, constraints)`
+- `ews_create_meeting_preview(...)`
+- `ews_create_meeting_confirmed(...)` guarded by human approval
 
-Do not pass EWS passwords through the LLM. The agent should call a local/internal tool that reads credentials from environment variables, Keychain, Vault, or another secret store.
+Do not pass EWS passwords through the LLM. At the start of a scheduling session, the agent should call `ews_keychain_status`. If it returns `configured: false`, run or show the returned `setup_command` so the user can enter the password into macOS Keychain, then call `ews_keychain_status` again before continuing.
 
 If a meeting request contains attendee names or aliases instead of complete email addresses, call `ews_resolve_attendees` first and use only the selected resolved emails for availability checks and meeting creation. The scheduling and meeting tools also auto-resolve non-email attendees before calling EWS. If a name is ambiguous or not found, ask the user to choose or provide the exact email before continuing.
 
@@ -255,7 +256,7 @@ MCP config for an npm-published package:
   "mcpServers": {
     "ews-meeting-mcp": {
       "command": "npx",
-      "args": ["-y", "ews-meeting-mcp"],
+      "args": ["-y", "ews-meeting-mcp@0.1.9"],
       "env": {
         "EWS_ENDPOINT": "https://mail.company.com/EWS/Exchange.asmx",
         "EWS_EMAIL": "your_user@company.com",

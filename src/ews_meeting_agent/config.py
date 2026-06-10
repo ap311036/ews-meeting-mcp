@@ -3,7 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 import os
 from pathlib import Path
+import shlex
 import subprocess
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -84,6 +86,77 @@ def _password(*, username: str, email: str) -> str:
             f"for service {service!r} and account {account!r}."
         )
     return password
+
+
+def keychain_status() -> dict[str, Any]:
+    username = os.environ.get("EWS_USERNAME", "")
+    email = os.environ.get("EWS_EMAIL", "")
+    service = os.environ.get("EWS_PASSWORD_KEYCHAIN_SERVICE", "ews-meeting-mcp")
+    account = os.environ.get("EWS_PASSWORD_KEYCHAIN_ACCOUNT", username or email)
+
+    status: dict[str, Any] = {
+        "configured": False,
+        "source": "missing",
+        "service": service,
+        "account": account,
+    }
+    if os.environ.get("EWS_PASSWORD"):
+        status.update({"configured": True, "source": "environment"})
+        return status
+
+    if not account:
+        status["message"] = (
+            "Set EWS_USERNAME or EWS_PASSWORD_KEYCHAIN_ACCOUNT before checking Keychain."
+        )
+        return status
+
+    try:
+        result = _run_keychain_lookup(service=service, account=account)
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        status["setup_command"] = _keychain_setup_command(service=service, account=account)
+        return status
+
+    if result.stdout.strip():
+        status.update({"configured": True, "source": "keychain"})
+    else:
+        status["setup_command"] = _keychain_setup_command(service=service, account=account)
+    return status
+
+
+def _run_keychain_lookup(*, service: str, account: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [
+            "security",
+            "find-generic-password",
+            "-s",
+            service,
+            "-a",
+            account,
+            "-w",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
+def _keychain_setup_command(*, service: str, account: str) -> str:
+    quoted_service = shlex.quote(service)
+    quoted_account = shlex.quote(account)
+    return "\n".join(
+        [
+            'printf "EWS password: "',
+            "stty -echo",
+            "read EWS_PASSWORD",
+            "stty echo",
+            'printf "\\n"',
+            (
+                "security add-generic-password -U "
+                f"-s {quoted_service} -a {quoted_account} -w \"$EWS_PASSWORD\""
+            ),
+            "unset EWS_PASSWORD",
+        ]
+    )
 
 
 def load_dotenv(path: Path) -> None:

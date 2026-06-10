@@ -17,6 +17,8 @@ class SkillContractTests(unittest.TestCase):
         self.assertIn("ask whether a meeting room is needed", text)
         self.assertIn("require_room", text)
         self.assertIn("capacity", text)
+        self.assertIn("ews_keychain_status", text)
+        self.assertIn("setup_command", text)
 
 
 if __name__ == "__main__":

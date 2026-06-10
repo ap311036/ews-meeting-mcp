@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from ews_meeting_agent.config import EwsConfig
+from ews_meeting_agent.config import EwsConfig, keychain_status
 
 
 class ConfigTests(unittest.TestCase):
@@ -77,6 +77,45 @@ class ConfigTests(unittest.TestCase):
                 run.assert_not_called()
             finally:
                 os.chdir(old_cwd)
+
+    def test_keychain_status_reports_environment_password_without_exposing_it(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "EWS_USERNAME": "bk00325",
+                "EWS_PASSWORD": "secret-from-env",
+                "EWS_PASSWORD_KEYCHAIN_SERVICE": "ews-meeting-mcp",
+            },
+            clear=True,
+        ):
+            with patch("subprocess.run") as run:
+                status = keychain_status()
+
+        self.assertTrue(status["configured"])
+        self.assertEqual(status["source"], "environment")
+        self.assertNotIn("secret-from-env", str(status))
+        run.assert_not_called()
+
+    def test_keychain_status_reports_missing_item_with_setup_command(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "EWS_USERNAME": "bk00325",
+                "EWS_PASSWORD_KEYCHAIN_SERVICE": "ews-meeting-mcp",
+            },
+            clear=True,
+        ):
+            with patch("subprocess.run") as run:
+                run.side_effect = subprocess.CalledProcessError(44, ["security"])
+
+                status = keychain_status()
+
+        self.assertFalse(status["configured"])
+        self.assertEqual(status["source"], "missing")
+        self.assertEqual(status["service"], "ews-meeting-mcp")
+        self.assertEqual(status["account"], "bk00325")
+        self.assertIn("security add-generic-password", status["setup_command"])
+        self.assertIn("-a bk00325", status["setup_command"])
 
 
 if __name__ == "__main__":

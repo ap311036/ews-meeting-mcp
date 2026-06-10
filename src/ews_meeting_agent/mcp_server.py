@@ -9,9 +9,10 @@ from typing import Any, Callable
 from . import agent_tools
 
 
-SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.8"}
+SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.9"}
 
 TOOL_HANDLERS: dict[str, Callable[..., Any]] = {
+    "ews_keychain_status": agent_tools.ews_keychain_status,
     "ews_probe": agent_tools.ews_probe,
     "ews_list_calendar": agent_tools.ews_list_calendar,
     "ews_resolve_attendees": agent_tools.ews_resolve_attendees,
@@ -184,6 +185,14 @@ def _suggest_schema() -> dict[str, Any]:
 
 def _tool_defs() -> list[dict[str, Any]]:
     return [
+        {
+            "name": "ews_keychain_status",
+            "description": (
+                "Check whether EWS password credentials are available from environment variables "
+                "or macOS Keychain without revealing the password."
+            ),
+            "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+        },
         {
             "name": "ews_probe",
             "description": "Check that the configured EWS account can connect. Does not read calendar items.",

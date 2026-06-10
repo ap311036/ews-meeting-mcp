@@ -9,16 +9,17 @@ Use the `ews-meeting-mcp` MCP tools to schedule meetings through an on-prem Exch
 
 ## Workflow
 
-1. Parse the user's request into attendees, candidate rooms, date range, duration, subject, body, and location.
-2. If any attendee is not a complete email address, call `ews_resolve_attendees` first.
-3. Use exactly resolved emails for scheduling. If a name has zero matches or multiple matches, show the candidates and ask the user to choose before continuing.
-4. If the user did not mention rooms, ask whether a meeting room is needed and list these choices: `2-11`, `2-13`, `2-14`, `3-1 (12P)`, `3-2 (6P)`, `3-4 (6P)`, or "no specific room".
-5. If the user wants a room but does not choose a specific room, call `ews_suggest_slots` with `require_room: true` and no `rooms`; the tool searches all built-in rooms and filters rooms with known `capacity` below the attendee count. `P` means persons.
-6. If the user chooses specific rooms, pass those room aliases or emails in `rooms` when calling `ews_suggest_slots`.
-7. Show suggested slots with their `available_rooms`. The default scheduling policy starts at `10:00`, ends at `18:00`, and avoids `12:00-14:00`.
-8. When the user picks a slot and room, call `ews_create_meeting_preview` with the selected room in `rooms`.
-9. Show the exact preview: attendees, rooms, start, end, subject, body, and location.
-10. Only after the user explicitly confirms, call `ews_create_meeting_confirmed` with `confirm: true`.
+1. At the start of a scheduling session, call `ews_keychain_status`. If it returns `configured: false`, run or show its `setup_command` so the user can enter the password into macOS Keychain, then call `ews_keychain_status` again before continuing.
+2. Parse the user's request into attendees, candidate rooms, date range, duration, subject, body, and location.
+3. If any attendee is not a complete email address, call `ews_resolve_attendees` first.
+4. Use exactly resolved emails for scheduling. If a name has zero matches or multiple matches, show the candidates and ask the user to choose before continuing.
+5. If the user did not mention rooms, ask whether a meeting room is needed and list these choices: `2-11`, `2-13`, `2-14`, `3-1 (12P)`, `3-2 (6P)`, `3-4 (6P)`, or "no specific room".
+6. If the user wants a room but does not choose a specific room, call `ews_suggest_slots` with `require_room: true` and no `rooms`; the tool searches all built-in rooms and filters rooms with known `capacity` below the attendee count. `P` means persons.
+7. If the user chooses specific rooms, pass those room aliases or emails in `rooms` when calling `ews_suggest_slots`.
+8. Show suggested slots with their `available_rooms`. The default scheduling policy starts at `10:00`, ends at `18:00`, and avoids `12:00-14:00`.
+9. When the user picks a slot and room, call `ews_create_meeting_preview` with the selected room in `rooms`.
+10. Show the exact preview: attendees, rooms, start, end, subject, body, and location.
+11. Only after the user explicitly confirms, call `ews_create_meeting_confirmed` with `confirm: true`.
 
 ## Safety
 
@@ -30,6 +31,7 @@ Use the `ews-meeting-mcp` MCP tools to schedule meetings through an on-prem Exch
 ## Tool Notes
 
 - Use `ews_resolve_attendees` whenever the user gives names, aliases, or mixed name/email attendee lists.
+- Use `ews_keychain_status` before the first EWS operation in a session. It never returns the password.
 - Scheduling and meeting tools also auto-resolve non-email attendees; if they report ambiguity or not found, ask the user to choose or provide the exact email.
 - Use multiple attendee emails and candidate room aliases in one `ews_suggest_slots` call.
 - Use `require_room: true` when the user wants a room but does not specify which room.
