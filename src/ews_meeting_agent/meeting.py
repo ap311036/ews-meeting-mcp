@@ -12,6 +12,7 @@ class MeetingRequest:
     end: datetime
     body: str = ""
     location: str = ""
+    rooms: list[str] | None = None
 
     def validate(self) -> None:
         if not self.subject.strip():
@@ -29,9 +30,9 @@ def build_meeting_preview(request: MeetingRequest, *, confirmed: bool) -> dict[s
         "will_send_invites": confirmed,
         "subject": request.subject,
         "attendees": request.attendees,
+        "rooms": request.rooms or [],
         "start": request.start.isoformat(),
         "end": request.end.isoformat(),
         "location": request.location,
         "body": request.body,
     }
-

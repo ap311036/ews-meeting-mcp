@@ -47,6 +47,18 @@ class EwsClient:
         ]
 
     def get_free_busy(self, attendees: list[str], start: datetime, end: datetime) -> list[TimeBlock]:
+        by_attendee = self.get_free_busy_by_attendee(attendees, start, end)
+        busy: list[TimeBlock] = []
+        for blocks in by_attendee.values():
+            busy.extend(blocks)
+        return busy
+
+    def get_free_busy_by_attendee(
+        self,
+        attendees: list[str],
+        start: datetime,
+        end: datetime,
+    ) -> dict[str, list[TimeBlock]]:
         start = self._to_ews_datetime(start)
         end = self._to_ews_datetime(end)
         account_tuples = [(email, "Required", False) for email in attendees]
@@ -57,13 +69,13 @@ class EwsClient:
             merged_free_busy_interval=15,
         )
 
-        busy: list[TimeBlock] = []
-        for entry in free_busy_entries:
+        busy_by_attendee: dict[str, list[TimeBlock]] = {email: [] for email in attendees}
+        for email, entry in zip(attendees, free_busy_entries):
             for event in getattr(entry, "calendar_events", []) or []:
                 status = str(getattr(event, "busy_type", "")).lower()
                 if status in {"busy", "tentative", "oof", "working_elsewhere"}:
-                    busy.append(TimeBlock(event.start, event.end))
-        return busy
+                    busy_by_attendee[email].append(TimeBlock(event.start, event.end))
+        return busy_by_attendee
 
     def resolve_attendees(self, attendees: list[str], *, limit: int = 5) -> list[dict[str, Any]]:
         results: list[dict[str, Any]] = []
@@ -115,6 +127,7 @@ class EwsClient:
             end=self._to_ews_datetime(request.end),
             location=request.location,
             required_attendees=request.attendees,
+            resources=request.rooms or [],
         )
         item.save(send_meeting_invitations=SEND_TO_ALL_AND_SAVE_COPY)
 

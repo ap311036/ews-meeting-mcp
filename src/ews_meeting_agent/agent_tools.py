@@ -7,10 +7,19 @@ from typing import Any, Callable
 from .config import EwsConfig
 from .ews_client import EwsClient, default_window
 from .meeting import MeetingRequest, build_meeting_preview
-from .scheduler import parse_time_range, suggest_slots
+from .scheduler import TimeBlock, overlaps, parse_time_range, suggest_slots
 
 
 ClientFactory = Callable[[], EwsClient]
+
+KNOWN_ROOMS: dict[str, dict[str, str]] = {
+    "2-11": {"name": "2-11 Meeting Room", "email": "2-11MeetingRoom@linebank.com.tw"},
+    "2-13": {"name": "2-13 Meeting Room", "email": "2-13MeetingRoom@linebank.com.tw"},
+    "2-14": {"name": "2-14 Meeting Room", "email": "2-14MeetingRoom@linebank.com.tw"},
+    "3-1": {"name": "3-1 Meeting Room(12P)", "email": "3-1MeetingRoom@linebank.com.tw"},
+    "3-2": {"name": "3-2 Meeting Room(6P)", "email": "3-2MeetingRoom@linebank.com.tw"},
+    "3-4": {"name": "3-4 Meeting Room(6P)", "email": "3-4MeetingRoom@linebank.com.tw"},
+}
 
 
 def default_client_factory() -> EwsClient:
@@ -60,6 +69,7 @@ def ews_get_free_busy(
 def ews_suggest_slots(
     *,
     attendees: list[str],
+    rooms: list[str] | None = None,
     start: str,
     end: str,
     duration_minutes: int = 30,
@@ -75,6 +85,8 @@ def ews_suggest_slots(
     client = client_factory()
     attendee_emails = _attendee_emails(attendees, client)
     busy = client.get_free_busy(attendee_emails, window_start, window_end)
+    room_infos = _room_infos(rooms or [], client)
+    slot_limit = 1000 if room_infos else limit
     slots = suggest_slots(
         busy,
         window_start,
@@ -83,24 +95,54 @@ def ews_suggest_slots(
         workday_start=datetime.strptime(workday_start, "%H:%M").time(),
         workday_end=datetime.strptime(workday_end, "%H:%M").time(),
         excluded_windows=[parse_time_range(value) for value in avoid],
-        limit=limit,
+        limit=slot_limit,
     )
-    return [_block_to_dict(slot) for slot in slots]
+    if not room_infos:
+        return [_block_to_dict(slot) for slot in slots]
+
+    room_busy = client.get_free_busy_by_attendee(
+        [room["email"] for room in room_infos],
+        window_start,
+        window_end,
+    )
+    suggestions: list[dict[str, Any]] = []
+    for slot in slots:
+        available_rooms = [
+            room
+            for room in room_infos
+            if not any(overlaps(slot, busy_block) for busy_block in room_busy.get(room["email"], []))
+        ]
+        if available_rooms:
+            payload = _block_to_dict(slot)
+            payload["available_rooms"] = available_rooms
+            suggestions.append(payload)
+        if len(suggestions) >= limit:
+            break
+    return suggestions
 
 
 def ews_create_meeting_preview(
     *,
     subject: str,
     attendees: list[str],
+    rooms: list[str] | None = None,
     start: str,
     end: str,
     body: str = "",
     location: str = "",
     client_factory: ClientFactory = default_client_factory,
 ) -> dict[str, Any]:
+    needs_client = _needs_resolution(attendees) or _rooms_need_resolution(rooms or [])
+    client = client_factory() if needs_client else None
     if _needs_resolution(attendees):
-        attendees = _attendee_emails(attendees, client_factory())
-    request = _meeting_request(subject, attendees, start, end, body, location)
+        if client is None:
+            client = client_factory()
+        attendees = _attendee_emails(attendees, client)
+    room_infos = _room_infos(rooms or [], client) if rooms else []
+    room_emails = [room["email"] for room in room_infos]
+    if not location and room_infos:
+        location = room_infos[0]["name"]
+    request = _meeting_request(subject, attendees, room_emails, start, end, body, location)
     return build_meeting_preview(request, confirmed=False)
 
 
@@ -108,6 +150,7 @@ def ews_create_meeting_confirmed(
     *,
     subject: str,
     attendees: list[str],
+    rooms: list[str] | None = None,
     start: str,
     end: str,
     body: str = "",
@@ -120,7 +163,11 @@ def ews_create_meeting_confirmed(
 
     client = client_factory()
     attendee_emails = _attendee_emails(attendees, client)
-    request = _meeting_request(subject, attendee_emails, start, end, body, location)
+    room_infos = _room_infos(rooms or [], client)
+    room_emails = [room["email"] for room in room_infos]
+    if not location and room_infos:
+        location = room_infos[0]["name"]
+    request = _meeting_request(subject, attendee_emails, room_emails, start, end, body, location)
     preview = build_meeting_preview(request, confirmed=True)
     created = client.create_meeting(request)
     return {"preview": preview, "created": created}
@@ -129,6 +176,7 @@ def ews_create_meeting_confirmed(
 def _meeting_request(
     subject: str,
     attendees: list[str],
+    rooms: list[str],
     start: str,
     end: str,
     body: str,
@@ -137,6 +185,7 @@ def _meeting_request(
     return MeetingRequest(
         subject=subject,
         attendees=attendees,
+        rooms=rooms,
         start=datetime.fromisoformat(start),
         end=datetime.fromisoformat(end),
         body=body,
@@ -185,6 +234,80 @@ def _attendee_emails(attendees: list[str], client: EwsClient) -> list[str]:
         raise ValueError(f"Could not resolve attendee '{query}' to an email address.")
 
     return emails
+
+
+def _room_infos(rooms: list[str], client: EwsClient) -> list[dict[str, str]]:
+    room_infos: list[dict[str, str]] = []
+    unresolved: list[str] = []
+    for room in rooms:
+        query = room.strip()
+        if not query:
+            continue
+        known_room = KNOWN_ROOMS.get(_room_key(query))
+        if known_room:
+            room_infos.append(dict(known_room))
+        elif _looks_like_email(query):
+            room_infos.append({"name": query, "email": query})
+        else:
+            unresolved.append(query)
+
+    if unresolved:
+        if client is None:
+            raise ValueError(f"Could not resolve room without EWS directory lookup: {', '.join(unresolved)}")
+        room_infos.extend(_resolved_room_infos(unresolved, client))
+    return _dedupe_rooms(room_infos)
+
+
+def _rooms_need_resolution(rooms: list[str]) -> bool:
+    for room in rooms:
+        query = room.strip()
+        if not query:
+            continue
+        if KNOWN_ROOMS.get(_room_key(query)) or _looks_like_email(query):
+            continue
+        return True
+    return False
+
+
+def _room_key(value: str) -> str:
+    match = re.search(r"\b(\d+-\d+)\b", value.strip())
+    return match.group(1) if match else value.strip()
+
+
+def _resolved_room_infos(rooms: list[str], client: EwsClient) -> list[dict[str, str]]:
+    resolved = client.resolve_attendees(rooms, limit=5)
+    room_infos: list[dict[str, str]] = []
+    for item in resolved:
+        query = str(item.get("query", ""))
+        status = str(item.get("status", ""))
+        matches = item.get("matches", [])
+        if not isinstance(matches, list):
+            matches = []
+        if status in {"email", "resolved"} and len(matches) == 1:
+            name = str(matches[0].get("name", "")).strip() or query
+            email = str(matches[0].get("email", "")).strip()
+            if _looks_like_email(email):
+                room_infos.append({"name": name, "email": email})
+                continue
+        if status == "ambiguous":
+            raise ValueError(
+                f"Room '{query}' is ambiguous. Ask the user to choose one room email: "
+                f"{_format_matches(matches)}"
+            )
+        raise ValueError(f"Could not resolve room '{query}' to an email address.")
+    return room_infos
+
+
+def _dedupe_rooms(rooms: list[dict[str, str]]) -> list[dict[str, str]]:
+    deduped: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for room in rooms:
+        email = room["email"].lower()
+        if email in seen:
+            continue
+        seen.add(email)
+        deduped.append(room)
+    return deduped
 
 
 def _format_matches(matches: list[object]) -> str:

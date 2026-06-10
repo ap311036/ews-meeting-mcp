@@ -11,10 +11,11 @@ class MeetingTests(unittest.TestCase):
         request = MeetingRequest(
             subject="Project sync",
             attendees=["eason.lin@linebank.com.tw"],
+            rooms=["3-1MeetingRoom@linebank.com.tw"],
             start=datetime.fromisoformat("2026-06-15T11:00:00+08:00"),
             end=datetime.fromisoformat("2026-06-15T11:30:00+08:00"),
             body="Discuss next steps",
-            location="Webex",
+            location="3-1 Meeting Room(12P)",
         )
 
         preview = build_meeting_preview(request, confirmed=False)
@@ -23,6 +24,7 @@ class MeetingTests(unittest.TestCase):
         self.assertFalse(preview["will_send_invites"])
         self.assertEqual(preview["subject"], "Project sync")
         self.assertEqual(preview["attendees"], ["eason.lin@linebank.com.tw"])
+        self.assertEqual(preview["rooms"], ["3-1MeetingRoom@linebank.com.tw"])
 
     def test_build_meeting_preview_marks_confirmed_send(self) -> None:
         request = MeetingRequest(
@@ -40,4 +42,3 @@ class MeetingTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

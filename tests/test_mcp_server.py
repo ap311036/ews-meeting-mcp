@@ -17,6 +17,14 @@ class McpServerTests(unittest.TestCase):
         self.assertIn("ews_create_meeting_preview", tool_names)
         self.assertIn("ews_create_meeting_confirmed", tool_names)
 
+    def test_suggest_slots_tool_schema_accepts_rooms(self) -> None:
+        response = handle_request({"jsonrpc": "2.0", "id": 12, "method": "tools/list"})
+
+        tools = response["result"]["tools"]
+        tool = next(item for item in tools if item["name"] == "ews_suggest_slots")
+
+        self.assertIn("rooms", tool["inputSchema"]["properties"])
+
     def test_resolve_attendees_tool_schema_accepts_names_or_emails(self) -> None:
         response = handle_request({"jsonrpc": "2.0", "id": 11, "method": "tools/list"})
 

@@ -7,7 +7,7 @@ The first phase is intentionally read-only:
 - connect to an on-prem EWS endpoint
 - list your own upcoming calendar events
 - query attendee free/busy
-- suggest common meeting slots
+- suggest common meeting slots with optional room availability
 
 Creating, updating, or canceling meetings should be added only after the read-only checks pass, and should require explicit human confirmation before sending any invitation.
 
@@ -159,7 +159,7 @@ Available and recommended tools for the agent:
 - `ews_resolve_attendees(attendees, limit)`
 - `ews_get_free_busy(attendees, start, end)`
 - `ews_list_my_calendar(start, end)`
-- `ews_suggest_meeting_slots(attendees, start, end, duration, constraints)`
+- `ews_suggest_meeting_slots(attendees, rooms, start, end, duration, constraints)`
 - `ews_create_meeting(...)` guarded by human approval
 - `ews_update_meeting(...)` guarded by human approval
 - `ews_cancel_meeting(...)` guarded by human approval
@@ -167,6 +167,8 @@ Available and recommended tools for the agent:
 Do not pass EWS passwords through the LLM. The agent should call a local/internal tool that reads credentials from environment variables, Keychain, Vault, or another secret store.
 
 If a meeting request contains attendee names or aliases instead of complete email addresses, call `ews_resolve_attendees` first and use only the selected resolved emails for availability checks and meeting creation. The scheduling and meeting tools also auto-resolve non-email attendees before calling EWS. If a name is ambiguous or not found, ask the user to choose or provide the exact email before continuing.
+
+If a meeting requires a room, pass candidate rooms to `ews_suggest_slots` in `rooms`. The built-in room aliases are `2-11`, `2-13`, `2-14`, `3-1`, `3-2`, and `3-4`; each maps to the matching `MeetingRoom@linebank.com.tw` resource mailbox. Suggestions include `available_rooms`, and the selected room should be passed to the preview and confirmed meeting tools in `rooms` so Exchange books it as a resource.
 
 ## MCP server
 

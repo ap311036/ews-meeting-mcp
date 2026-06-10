@@ -9,7 +9,7 @@ from typing import Any, Callable
 from . import agent_tools
 
 
-SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.5"}
+SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.6"}
 
 TOOL_HANDLERS: dict[str, Callable[..., Any]] = {
     "ews_probe": agent_tools.ews_probe,
@@ -53,8 +53,9 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
                 "serverInfo": SERVER_INFO,
                 "instructions": (
                     "Resolve non-email attendee names with ews_resolve_attendees before scheduling. "
-                    "Use ews_suggest_slots with resolved email addresses. Before sending invitations, "
-                    "show the preview from ews_create_meeting_preview and ask the user to confirm."
+                    "Use ews_suggest_slots with resolved email addresses and candidate rooms when a room "
+                    "is needed. Before sending invitations, show the preview from "
+                    "ews_create_meeting_preview and ask the user to confirm."
                 ),
             },
         )
@@ -96,6 +97,12 @@ def _meeting_schema(*, include_confirm: bool) -> dict[str, Any]:
     properties: dict[str, Any] = {
         "subject": {"type": "string"},
         "attendees": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "rooms": {
+            "type": "array",
+            "items": {"type": "string"},
+            "default": [],
+            "description": "Meeting room names, aliases, or email addresses.",
+        },
         "start": {"type": "string", "description": "ISO datetime with timezone"},
         "end": {"type": "string", "description": "ISO datetime with timezone"},
         "body": {"type": "string", "default": ""},
@@ -150,6 +157,12 @@ def _suggest_schema() -> dict[str, Any]:
     schema = _free_busy_schema()
     schema["properties"].update(
         {
+            "rooms": {
+                "type": "array",
+                "items": {"type": "string"},
+                "default": [],
+                "description": "Candidate meeting rooms. Supports aliases like 2-11, 2-13, 2-14, 3-1, 3-2, 3-4.",
+            },
             "duration_minutes": {"type": "integer", "default": 30, "minimum": 1},
             "limit": {"type": "integer", "default": 5, "minimum": 1},
             "workday_start": {"type": "string", "default": "10:00"},
@@ -197,8 +210,8 @@ def _tool_defs() -> list[dict[str, Any]]:
         {
             "name": "ews_suggest_slots",
             "description": (
-                "Suggest nearest overlapping free meeting slots for multiple attendees. Defaults to "
-                "10:00-18:00 and avoids 12:00-14:00."
+                "Suggest nearest overlapping free meeting slots for multiple attendees and optional "
+                "candidate meeting rooms. Defaults to 10:00-18:00 and avoids 12:00-14:00."
             ),
             "inputSchema": _suggest_schema(),
         },

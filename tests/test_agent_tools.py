@@ -1,16 +1,19 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import unittest
 
 from ews_meeting_agent import agent_tools
+from ews_meeting_agent.scheduler import TimeBlock
 
 
 class FakeClient:
     def __init__(self) -> None:
         self.calls: list[tuple[list[str], int]] = []
         self.free_busy_calls: list[list[str]] = []
+        self.free_busy_by_attendee_calls: list[list[str]] = []
         self.created_attendees: list[str] | None = None
+        self.created_rooms: list[str] | None = None
 
     def resolve_attendees(self, attendees: list[str], *, limit: int = 5) -> list[dict[str, object]]:
         self.calls.append((attendees, limit))
@@ -38,11 +41,14 @@ class FakeClient:
                     }
                 )
             else:
+                email = "ming.wang@example.com"
+                if "MeetingRoom" in attendee:
+                    email = attendee
                 results.append(
                     {
                         "query": attendee,
                         "status": "resolved",
-                        "matches": [{"name": attendee, "email": "ming.wang@example.com"}],
+                        "matches": [{"name": attendee, "email": email}],
                     }
                 )
         return results
@@ -51,8 +57,26 @@ class FakeClient:
         self.free_busy_calls.append(attendees)
         return []
 
+    def get_free_busy_by_attendee(
+        self,
+        attendees: list[str],
+        start: datetime,
+        end: datetime,
+    ) -> dict[str, list[object]]:
+        self.free_busy_by_attendee_calls.append(attendees)
+        busy_start = start + timedelta(minutes=30)
+        busy_end = start + timedelta(minutes=60)
+        return {
+            "3-1MeetingRoom@linebank.com.tw": [],
+            "3-2MeetingRoom@linebank.com.tw": [TimeBlock(busy_start, busy_end)],
+            "2-11MeetingRoom@linebank.com.tw": [],
+            "2-13MeetingRoom@linebank.com.tw": [],
+            "2-14MeetingRoom@linebank.com.tw": [],
+        }
+
     def create_meeting(self, request: object) -> dict[str, str]:
         self.created_attendees = request.attendees
+        self.created_rooms = request.rooms
         return {"id": "event-1", "changekey": "ck-1"}
 
 
@@ -82,6 +106,37 @@ class AgentToolTests(unittest.TestCase):
         self.assertEqual(client.calls, [(["王小明"], 5)])
         self.assertEqual(client.free_busy_calls, [["ming.wang@example.com"]])
 
+    def test_suggest_slots_filters_available_rooms_for_each_person_slot(self) -> None:
+        client = FakeClient()
+
+        result = agent_tools.ews_suggest_slots(
+            attendees=["王小明"],
+            rooms=["3-1", "3-2", "2-11", "2-13", "2-14"],
+            start="2026-06-15T10:00:00+08:00",
+            end="2026-06-15T11:00:00+08:00",
+            duration_minutes=30,
+            limit=2,
+            client_factory=lambda: client,
+        )
+
+        self.assertEqual(
+            client.free_busy_by_attendee_calls,
+            [
+                [
+                    "3-1MeetingRoom@linebank.com.tw",
+                    "3-2MeetingRoom@linebank.com.tw",
+                    "2-11MeetingRoom@linebank.com.tw",
+                    "2-13MeetingRoom@linebank.com.tw",
+                    "2-14MeetingRoom@linebank.com.tw",
+                ]
+            ],
+        )
+        self.assertEqual(result[0]["available_rooms"][0]["email"], "3-1MeetingRoom@linebank.com.tw")
+        self.assertNotIn(
+            "3-2MeetingRoom@linebank.com.tw",
+            [room["email"] for room in result[1]["available_rooms"]],
+        )
+
     def test_suggest_slots_reports_ambiguous_names_before_free_busy_lookup(self) -> None:
         client = FakeClient()
 
@@ -101,6 +156,7 @@ class AgentToolTests(unittest.TestCase):
         result = agent_tools.ews_create_meeting_confirmed(
             subject="Sync",
             attendees=["王小明"],
+            rooms=["3-1"],
             start="2026-06-15T10:00:00+08:00",
             end="2026-06-15T11:00:00+08:00",
             confirm=True,
@@ -108,7 +164,25 @@ class AgentToolTests(unittest.TestCase):
         )
 
         self.assertEqual(result["preview"]["attendees"], ["ming.wang@example.com"])
+        self.assertEqual(result["preview"]["rooms"], ["3-1MeetingRoom@linebank.com.tw"])
         self.assertEqual(client.created_attendees, ["ming.wang@example.com"])
+        self.assertEqual(client.created_rooms, ["3-1MeetingRoom@linebank.com.tw"])
+
+    def test_preview_with_known_room_alias_does_not_require_client(self) -> None:
+        def fail_client_factory() -> FakeClient:
+            raise AssertionError("client should not be created for known room aliases")
+
+        result = agent_tools.ews_create_meeting_preview(
+            subject="Sync",
+            attendees=["ming.wang@example.com"],
+            rooms=["2-11"],
+            start="2026-06-15T10:00:00+08:00",
+            end="2026-06-15T11:00:00+08:00",
+            client_factory=fail_client_factory,
+        )
+
+        self.assertEqual(result["rooms"], ["2-11MeetingRoom@linebank.com.tw"])
+        self.assertEqual(result["location"], "2-11 Meeting Room")
 
 
 if __name__ == "__main__":
