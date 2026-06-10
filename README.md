@@ -5,9 +5,15 @@
 [![Node.js >=18](https://img.shields.io/badge/node-%3E%3D18-339933)](package.json)
 [![Python](https://img.shields.io/badge/python-3.x-3776AB)](pyproject.toml)
 
-MCP server and CLI for scheduling meetings through on-prem Exchange Web Services.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/ap311036/ews-meeting-mcp/master/docs/assets/ews-meeting-mcp-demo.gif" alt="EWS Meeting MCP demo showing a safe Exchange scheduling flow with setup checks, room-aware slot suggestions, preview confirmation, verification, and audit logging" width="960">
+</p>
+
+The MCP server for safely scheduling Outlook meetings on on-prem Exchange EWS.
 
 EWS Meeting MCP gives coding assistants and desktop agents a safe, structured way to read Outlook availability, discover rooms, suggest meeting slots, and create, update, or cancel meetings only after an explicit human confirmation step.
+
+It is built for companies where calendar access is sensitive infrastructure: regulated teams, internal networks, strict security review, legacy Exchange deployments, and organizations that cannot simply hand a cloud agent broad Microsoft 365 permissions. Credentials stay local, write operations are previewed before they touch Exchange, and every confirmed lifecycle action can be traced through a local audit trail.
 
 ```bash
 npx ews-meeting-mcp
@@ -16,6 +22,8 @@ npx ews-meeting-mcp
 ## Why This Exists
 
 Many teams still run calendar infrastructure through on-prem Exchange/EWS. General-purpose agents can reason about scheduling, but they should not receive raw passwords, guess attendee addresses, or send calendar invitations without a reviewable checkpoint.
+
+This is not a generic Outlook wrapper or a Microsoft Graph-first calendar connector. It is designed for the stricter enterprise case: local EWS access, room resources, explicit human approval, duplicate-send protection, and audit-friendly meeting lifecycle tools.
 
 This project wraps Exchange calendar operations in a small MCP surface with:
 
