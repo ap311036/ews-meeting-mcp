@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from ews_meeting_agent.config import EwsConfig, keychain_status, setup_check
+from ews_meeting_mcp.config import EwsConfig, keychain_status, setup_check
 
 
 class ConfigTests(unittest.TestCase):
@@ -20,9 +20,9 @@ class ConfigTests(unittest.TestCase):
                     {
                         "EWS_ENDPOINT": "https://example.test/EWS/Exchange.asmx",
                         "EWS_EMAIL": "snoop.yu@example.test",
-                        "EWS_USERNAME": "LINEBANK\\snoop.yu",
+                        "EWS_USERNAME": "EXAMPLE\\snoop.yu",
                         "EWS_PASSWORD_KEYCHAIN_SERVICE": "ews-meeting-mcp",
-                        "EWS_PASSWORD_KEYCHAIN_ACCOUNT": "LINEBANK\\snoop.yu",
+                        "EWS_PASSWORD_KEYCHAIN_ACCOUNT": "EXAMPLE\\snoop.yu",
                     },
                     clear=True,
                 ):
@@ -44,7 +44,7 @@ class ConfigTests(unittest.TestCase):
                         "-s",
                         "ews-meeting-mcp",
                         "-a",
-                        "LINEBANK\\snoop.yu",
+                        "EXAMPLE\\snoop.yu",
                         "-w",
                     ],
                     check=True,
@@ -64,7 +64,7 @@ class ConfigTests(unittest.TestCase):
                     {
                         "EWS_ENDPOINT": "https://example.test/EWS/Exchange.asmx",
                         "EWS_EMAIL": "snoop.yu@example.test",
-                        "EWS_USERNAME": "LINEBANK\\snoop.yu",
+                        "EWS_USERNAME": "EXAMPLE\\snoop.yu",
                         "EWS_PASSWORD": "secret-from-env",
                         "EWS_PASSWORD_KEYCHAIN_SERVICE": "ews-meeting-mcp",
                     },

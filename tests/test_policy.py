@@ -5,8 +5,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from ews_meeting_agent.errors import EwsToolError
-from ews_meeting_agent.policy import load_policy
+from ews_meeting_mcp.errors import EwsToolError
+from ews_meeting_mcp.policy import load_policy
 
 
 class PolicyTests(unittest.TestCase):
@@ -83,7 +83,7 @@ class PolicyTests(unittest.TestCase):
                 policy = load_policy()
 
         room_by_alias = {room["alias"]: room for room in policy.rooms}
-        self.assertEqual(room_by_alias["2-11"]["email"], "2-11MeetingRoom@linebank.com.tw")
+        self.assertEqual(room_by_alias["2-11"]["email"], "2-11MeetingRoom@example.com")
         self.assertEqual(room_by_alias["3-1"]["email"], "custom-3-1@example.com")
         self.assertEqual(room_by_alias["3-1"]["capacity"], 16)
         self.assertEqual(room_by_alias["5-1"]["capacity"], 20)

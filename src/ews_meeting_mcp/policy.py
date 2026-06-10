@@ -18,25 +18,25 @@ DEFAULT_WORKDAY_END = "18:00"
 DEFAULT_AVOID = ["12:00-14:00"]
 
 DEFAULT_ROOMS = [
-    {"alias": "2-11", "name": "2-11 Meeting Room", "email": "2-11MeetingRoom@linebank.com.tw"},
-    {"alias": "2-13", "name": "2-13 Meeting Room", "email": "2-13MeetingRoom@linebank.com.tw"},
-    {"alias": "2-14", "name": "2-14 Meeting Room", "email": "2-14MeetingRoom@linebank.com.tw"},
+    {"alias": "2-11", "name": "2-11 Meeting Room", "email": "2-11MeetingRoom@example.com"},
+    {"alias": "2-13", "name": "2-13 Meeting Room", "email": "2-13MeetingRoom@example.com"},
+    {"alias": "2-14", "name": "2-14 Meeting Room", "email": "2-14MeetingRoom@example.com"},
     {
         "alias": "3-1",
         "name": "3-1 Meeting Room(12P)",
-        "email": "3-1MeetingRoom@linebank.com.tw",
+        "email": "3-1MeetingRoom@example.com",
         "capacity": 12,
     },
     {
         "alias": "3-2",
         "name": "3-2 Meeting Room(6P)",
-        "email": "3-2MeetingRoom@linebank.com.tw",
+        "email": "3-2MeetingRoom@example.com",
         "capacity": 6,
     },
     {
         "alias": "3-4",
         "name": "3-4 Meeting Room(6P)",
-        "email": "3-4MeetingRoom@linebank.com.tw",
+        "email": "3-4MeetingRoom@example.com",
         "capacity": 6,
     },
 ]

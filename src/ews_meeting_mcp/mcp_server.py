@@ -12,7 +12,7 @@ from .confirmations import ConfirmationLedger
 from .errors import EwsToolError
 
 
-SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.14"}
+SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.15"}
 
 TOOL_HANDLERS: dict[str, Callable[..., Any]] = {
     "ews_keychain_status": agent_tools.ews_keychain_status,

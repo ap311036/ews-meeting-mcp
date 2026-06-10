@@ -5,9 +5,9 @@ from datetime import datetime
 from types import SimpleNamespace
 import unittest
 
-from ews_meeting_agent.config import EwsConfig
-from ews_meeting_agent.ews_client import EwsClient
-from ews_meeting_agent.errors import EwsToolError
+from ews_meeting_mcp.config import EwsConfig
+from ews_meeting_mcp.ews_client import EwsClient
+from ews_meeting_mcp.errors import EwsToolError
 
 
 @dataclass

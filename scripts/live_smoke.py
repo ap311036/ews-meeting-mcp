@@ -14,8 +14,8 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from ews_meeting_agent import agent_tools  # noqa: E402
-from ews_meeting_agent.config import EwsConfig  # noqa: E402
+from ews_meeting_mcp import agent_tools  # noqa: E402
+from ews_meeting_mcp.config import EwsConfig  # noqa: E402
 
 
 def build_parser() -> argparse.ArgumentParser:

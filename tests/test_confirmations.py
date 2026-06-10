@@ -7,8 +7,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from ews_meeting_agent.confirmations import ConfirmationLedger, confirmation_id, default_state_dir
-from ews_meeting_agent.errors import EwsToolError
+from ews_meeting_mcp.confirmations import ConfirmationLedger, confirmation_id, default_state_dir
+from ews_meeting_mcp.errors import EwsToolError
 
 
 class ConfirmationTests(unittest.TestCase):
@@ -42,6 +42,18 @@ class ConfirmationTests(unittest.TestCase):
                 stored = json.loads((Path(state_dir) / "confirmation-ledger.json").read_text())
                 self.assertEqual(stored["completed"]["abc"]["action"], "create_meeting")
                 self.assertNotIn("password", json.dumps(stored).lower())
+
+    def test_ledger_prefers_mcp_state_dir_environment_name(self) -> None:
+        with tempfile.TemporaryDirectory() as state_dir:
+            with patch.dict(
+                os.environ,
+                {
+                    "EWS_MEETING_MCP_STATE_DIR": state_dir,
+                    "EWS_MEETING_AGENT_STATE_DIR": "/tmp/legacy-state",
+                },
+                clear=False,
+            ):
+                self.assertEqual(default_state_dir(), Path(state_dir))
 
     def test_ledger_reserve_blocks_duplicate_or_in_progress_confirmation(self) -> None:
         with tempfile.TemporaryDirectory() as state_dir:

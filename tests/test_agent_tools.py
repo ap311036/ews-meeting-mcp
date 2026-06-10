@@ -7,11 +7,11 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from ews_meeting_agent.audit import AuditLog
-from ews_meeting_agent.confirmations import ConfirmationLedger
-from ews_meeting_agent import agent_tools
-from ews_meeting_agent.errors import EwsToolError
-from ews_meeting_agent.scheduler import TimeBlock
+from ews_meeting_mcp.audit import AuditLog
+from ews_meeting_mcp.confirmations import ConfirmationLedger
+from ews_meeting_mcp import agent_tools
+from ews_meeting_mcp.errors import EwsToolError
+from ews_meeting_mcp.scheduler import TimeBlock
 
 
 class FakeClient:
@@ -96,12 +96,12 @@ class FakeClient:
         busy_start = start + timedelta(minutes=30)
         busy_end = start + timedelta(minutes=60)
         return {
-            "3-1MeetingRoom@linebank.com.tw": [],
-            "3-2MeetingRoom@linebank.com.tw": [TimeBlock(busy_start, busy_end)],
-            "2-11MeetingRoom@linebank.com.tw": [],
-            "2-13MeetingRoom@linebank.com.tw": [],
-            "2-14MeetingRoom@linebank.com.tw": [],
-            "3-4MeetingRoom@linebank.com.tw": [],
+            "3-1MeetingRoom@example.com": [],
+            "3-2MeetingRoom@example.com": [TimeBlock(busy_start, busy_end)],
+            "2-11MeetingRoom@example.com": [],
+            "2-13MeetingRoom@example.com": [],
+            "2-14MeetingRoom@example.com": [],
+            "3-4MeetingRoom@example.com": [],
         }
 
     def create_meeting(self, request: object) -> dict[str, str]:
@@ -281,17 +281,17 @@ class AgentToolTests(unittest.TestCase):
             client.free_busy_by_attendee_calls,
             [
                 [
-                    "3-1MeetingRoom@linebank.com.tw",
-                    "3-2MeetingRoom@linebank.com.tw",
-                    "2-11MeetingRoom@linebank.com.tw",
-                    "2-13MeetingRoom@linebank.com.tw",
-                    "2-14MeetingRoom@linebank.com.tw",
+                    "3-1MeetingRoom@example.com",
+                    "3-2MeetingRoom@example.com",
+                    "2-11MeetingRoom@example.com",
+                    "2-13MeetingRoom@example.com",
+                    "2-14MeetingRoom@example.com",
                 ]
             ],
         )
-        self.assertEqual(result[0]["available_rooms"][0]["email"], "3-1MeetingRoom@linebank.com.tw")
+        self.assertEqual(result[0]["available_rooms"][0]["email"], "3-1MeetingRoom@example.com")
         self.assertNotIn(
-            "3-2MeetingRoom@linebank.com.tw",
+            "3-2MeetingRoom@example.com",
             [room["email"] for room in result[1]["available_rooms"]],
         )
 
@@ -309,9 +309,9 @@ class AgentToolTests(unittest.TestCase):
         )
 
         room_emails = [room["email"] for room in result[0]["available_rooms"]]
-        self.assertIn("3-1MeetingRoom@linebank.com.tw", room_emails)
-        self.assertNotIn("3-2MeetingRoom@linebank.com.tw", room_emails)
-        self.assertNotIn("3-4MeetingRoom@linebank.com.tw", room_emails)
+        self.assertIn("3-1MeetingRoom@example.com", room_emails)
+        self.assertNotIn("3-2MeetingRoom@example.com", room_emails)
+        self.assertNotIn("3-4MeetingRoom@example.com", room_emails)
         self.assertEqual(result[0]["attendee_count"], 7)
 
     def test_suggest_slots_without_room_requirement_keeps_existing_behavior(self) -> None:
@@ -428,10 +428,10 @@ class AgentToolTests(unittest.TestCase):
         )
 
         self.assertEqual(result["preview"]["attendees"], ["ming.wang@example.com"])
-        self.assertEqual(result["preview"]["rooms"], ["3-1MeetingRoom@linebank.com.tw"])
+        self.assertEqual(result["preview"]["rooms"], ["3-1MeetingRoom@example.com"])
         self.assertEqual(result["preview"]["confirmation_id"], preview["confirmation_id"])
         self.assertEqual(client.created_attendees, ["ming.wang@example.com"])
-        self.assertEqual(client.created_rooms, ["3-1MeetingRoom@linebank.com.tw"])
+        self.assertEqual(client.created_rooms, ["3-1MeetingRoom@example.com"])
         self.assertEqual(client.created_meetings, 1)
 
     def test_create_preview_returns_deterministic_confirmation_id(self) -> None:
@@ -574,7 +574,7 @@ class AgentToolTests(unittest.TestCase):
         self.assertEqual(confirmed["changekey"], "ck-1")
         self.assertEqual(confirmed["subject"], "Sync")
         self.assertEqual(confirmed["attendees"], ["ming.wang@example.com"])
-        self.assertEqual(confirmed["resources"], ["3-1MeetingRoom@linebank.com.tw"])
+        self.assertEqual(confirmed["resources"], ["3-1MeetingRoom@example.com"])
 
     def test_in_progress_confirmation_writes_audit_entry(self) -> None:
         class BlockingClient(FakeClient):
@@ -790,16 +790,16 @@ class AgentToolTests(unittest.TestCase):
             client_factory=fail_client_factory,
         )
 
-        self.assertEqual(result["rooms"], ["2-11MeetingRoom@linebank.com.tw"])
+        self.assertEqual(result["rooms"], ["2-11MeetingRoom@example.com"])
         self.assertEqual(result["location"], "2-11 Meeting Room")
 
     def test_known_room_metadata_includes_capacity_when_name_declares_people(self) -> None:
         rooms = agent_tools.default_room_options()
 
         room_by_email = {room["email"]: room for room in rooms}
-        self.assertEqual(room_by_email["3-1MeetingRoom@linebank.com.tw"]["alias"], "3-1")
-        self.assertEqual(room_by_email["3-1MeetingRoom@linebank.com.tw"]["capacity"], 12)
-        self.assertEqual(room_by_email["3-2MeetingRoom@linebank.com.tw"]["capacity"], 6)
+        self.assertEqual(room_by_email["3-1MeetingRoom@example.com"]["alias"], "3-1")
+        self.assertEqual(room_by_email["3-1MeetingRoom@example.com"]["capacity"], 12)
+        self.assertEqual(room_by_email["3-2MeetingRoom@example.com"]["capacity"], 6)
 
     def test_list_rooms_returns_structured_options_for_user_selection(self) -> None:
         result = agent_tools.ews_list_rooms(attendee_count=7, source="static")
@@ -1017,7 +1017,7 @@ class AgentToolTests(unittest.TestCase):
                 result = agent_tools.ews_list_rooms()
 
         by_value = {option["value"]: option for option in result["options"]}
-        self.assertEqual(by_value["2-11"]["email"], "2-11MeetingRoom@linebank.com.tw")
+        self.assertEqual(by_value["2-11"]["email"], "2-11MeetingRoom@example.com")
         self.assertEqual(by_value["3-1"]["email"], "custom-3-1@example.com")
         self.assertEqual(by_value["5-1"]["capacity"], 20)
 
@@ -1050,7 +1050,7 @@ class AgentToolTests(unittest.TestCase):
 
         room_emails = [room["email"] for room in result[0]["available_rooms"]]
         self.assertIn("5-1MeetingRoom@example.com", room_emails)
-        self.assertNotIn("3-1MeetingRoom@linebank.com.tw", room_emails)
+        self.assertNotIn("3-1MeetingRoom@example.com", room_emails)
 
     def test_find_calendar_events_delegates_filters_to_client(self) -> None:
         client = FakeClient()

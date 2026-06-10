@@ -3,8 +3,8 @@ from __future__ import annotations
 from datetime import datetime, time, timedelta
 import unittest
 
-from ews_meeting_agent.scheduler import TimeBlock, parse_time_range, suggest_slots
-from ews_meeting_agent.scheduler import merge_blocks
+from ews_meeting_mcp.scheduler import TimeBlock, parse_time_range, suggest_slots
+from ews_meeting_mcp.scheduler import merge_blocks
 
 
 class SchedulerTests(unittest.TestCase):

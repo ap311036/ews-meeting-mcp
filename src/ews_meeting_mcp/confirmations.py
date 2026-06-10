@@ -27,7 +27,10 @@ def confirmation_id(action: str, payload: dict[str, Any]) -> str:
 
 
 def default_state_dir() -> Path:
-    configured = os.environ.get("EWS_MEETING_AGENT_STATE_DIR", "").strip()
+    configured = (
+        os.environ.get("EWS_MEETING_MCP_STATE_DIR", "").strip()
+        or os.environ.get("EWS_MEETING_AGENT_STATE_DIR", "").strip()
+    )
     if configured:
         return Path(configured).expanduser()
 

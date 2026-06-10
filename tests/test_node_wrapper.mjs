@@ -25,11 +25,11 @@ test("package python path points to bundled src directory", () => {
 });
 
 test("default mode launches MCP server", () => {
-  assert.deepEqual(buildPythonArgs([]), ["-m", "ews_meeting_agent.mcp_server"]);
+  assert.deepEqual(buildPythonArgs([]), ["-m", "ews_meeting_mcp.mcp_server"]);
 });
 
 test("cli mode launches original Python CLI with passthrough args", () => {
-  assert.deepEqual(buildPythonArgs(["--cli", "env"]), ["-m", "ews_meeting_agent.cli", "env"]);
+  assert.deepEqual(buildPythonArgs(["--cli", "env"]), ["-m", "ews_meeting_mcp.cli", "env"]);
 });
 
 test("bin entrypoint runs when invoked through an npm-style symlink", () => {

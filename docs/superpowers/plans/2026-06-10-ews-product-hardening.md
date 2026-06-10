@@ -56,10 +56,10 @@ printf '{"jsonrpc":"2.0","id":1,"method":"initialize"}\n{"jsonrpc":"2.0","id":2,
 **Goal:** Add a single diagnostic tool that explains whether the environment is ready, and make tool errors structured enough for agents to route correctly.
 
 **Files:**
-- Create: `src/ews_meeting_agent/errors.py`
-- Modify: `src/ews_meeting_agent/config.py`
-- Modify: `src/ews_meeting_agent/agent_tools.py`
-- Modify: `src/ews_meeting_agent/mcp_server.py`
+- Create: `src/ews_meeting_mcp/errors.py`
+- Modify: `src/ews_meeting_mcp/config.py`
+- Modify: `src/ews_meeting_mcp/agent_tools.py`
+- Modify: `src/ews_meeting_mcp/mcp_server.py`
 - Modify: `tests/test_config.py`
 - Modify: `tests/test_mcp_server.py`
 - Modify: `README.md`
@@ -138,11 +138,11 @@ Run all verification gates.
 **Goal:** Move default scheduling policy and built-in rooms out of hard-coded tool logic into a local config layer with safe defaults.
 
 **Files:**
-- Create: `src/ews_meeting_agent/policy.py`
+- Create: `src/ews_meeting_mcp/policy.py`
 - Create: `tests/test_policy.py`
 - Modify: `.env.example`
 - Modify: `README.md`
-- Modify: `src/ews_meeting_agent/agent_tools.py`
+- Modify: `src/ews_meeting_mcp/agent_tools.py`
 - Modify: `tests/test_agent_tools.py`
 
 - [ ] **Step 1: Write failing policy tests**
@@ -175,7 +175,7 @@ README sample:
   "workday_end": "18:00",
   "avoid": ["12:00-14:00"],
   "rooms": [
-    {"alias": "3-1", "name": "3-1 Meeting Room(12P)", "email": "3-1MeetingRoom@linebank.com.tw", "capacity": 12}
+    {"alias": "3-1", "name": "3-1 Meeting Room(12P)", "email": "3-1MeetingRoom@example.com", "capacity": 12}
   ]
 }
 ```
@@ -195,9 +195,9 @@ Run all verification gates.
 **Goal:** Add a dynamic room discovery path while preserving static fallback rooms.
 
 **Files:**
-- Modify: `src/ews_meeting_agent/ews_client.py`
-- Modify: `src/ews_meeting_agent/agent_tools.py`
-- Modify: `src/ews_meeting_agent/mcp_server.py`
+- Modify: `src/ews_meeting_mcp/ews_client.py`
+- Modify: `src/ews_meeting_mcp/agent_tools.py`
+- Modify: `src/ews_meeting_mcp/mcp_server.py`
 - Modify: `tests/test_ews_client.py`
 - Modify: `tests/test_agent_tools.py`
 - Modify: `tests/test_mcp_server.py`
@@ -229,7 +229,7 @@ ews_list_rooms(
 Return normalized rooms:
 
 ```json
-{"label": "3-1 Meeting Room(12P)", "value": "3-1MeetingRoom@linebank.com.tw", "alias": "3-1", "name": "3-1 Meeting Room(12P)", "email": "3-1MeetingRoom@linebank.com.tw", "capacity": 12, "room_list": "Taipei Rooms", "source": "exchange"}
+{"label": "3-1 Meeting Room(12P)", "value": "3-1MeetingRoom@example.com", "alias": "3-1", "name": "3-1 Meeting Room(12P)", "email": "3-1MeetingRoom@example.com", "capacity": 12, "room_list": "Taipei Rooms", "source": "exchange"}
 ```
 
 Use room email as `value` for dynamic rooms. Static aliases may remain accepted for compatibility.
@@ -257,9 +257,9 @@ Run all verification gates.
 **Goal:** Add safe lifecycle tools for meetings already created by the organizer.
 
 **Files:**
-- Modify: `src/ews_meeting_agent/ews_client.py`
-- Modify: `src/ews_meeting_agent/agent_tools.py`
-- Modify: `src/ews_meeting_agent/mcp_server.py`
+- Modify: `src/ews_meeting_mcp/ews_client.py`
+- Modify: `src/ews_meeting_mcp/agent_tools.py`
+- Modify: `src/ews_meeting_mcp/mcp_server.py`
 - Modify: `tests/test_ews_client.py`
 - Modify: `tests/test_agent_tools.py`
 - Modify: `tests/test_mcp_server.py`
@@ -315,10 +315,10 @@ Run all verification gates.
 **Goal:** Prevent accidental repeated sends when an agent retries a confirmed create/update/cancel call.
 
 **Files:**
-- Create: `src/ews_meeting_agent/confirmations.py`
+- Create: `src/ews_meeting_mcp/confirmations.py`
 - Create: `tests/test_confirmations.py`
-- Modify: `src/ews_meeting_agent/agent_tools.py`
-- Modify: `src/ews_meeting_agent/mcp_server.py`
+- Modify: `src/ews_meeting_mcp/agent_tools.py`
+- Modify: `src/ews_meeting_mcp/mcp_server.py`
 - Modify: `tests/test_agent_tools.py`
 - Modify: `README.md`
 - Modify: `skills/ews-meeting-mcp/SKILL.md`
@@ -350,9 +350,9 @@ Run all verification gates.
 **Goal:** Record side-effect attempts and outcomes without storing passwords.
 
 **Files:**
-- Create: `src/ews_meeting_agent/audit.py`
+- Create: `src/ews_meeting_mcp/audit.py`
 - Create: `tests/test_audit.py`
-- Modify: `src/ews_meeting_agent/agent_tools.py`
+- Modify: `src/ews_meeting_mcp/agent_tools.py`
 - Modify: `.gitignore`
 - Modify: `README.md`
 
@@ -383,9 +383,9 @@ Run all verification gates.
 **Goal:** After create/update, provide a way to verify the calendar item and inspect room response status.
 
 **Files:**
-- Modify: `src/ews_meeting_agent/ews_client.py`
-- Modify: `src/ews_meeting_agent/agent_tools.py`
-- Modify: `src/ews_meeting_agent/mcp_server.py`
+- Modify: `src/ews_meeting_mcp/ews_client.py`
+- Modify: `src/ews_meeting_mcp/agent_tools.py`
+- Modify: `src/ews_meeting_mcp/mcp_server.py`
 - Modify: `tests/test_ews_client.py`
 - Modify: `tests/test_agent_tools.py`
 - Modify: `tests/test_mcp_server.py`

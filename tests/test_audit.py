@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from ews_meeting_agent.audit import AuditLog, build_audit_entry, read_audit_log, record_lifecycle_audit
+from ews_meeting_mcp.audit import AuditLog, build_audit_entry, read_audit_log, record_lifecycle_audit
 
 
 class AuditLogTests(unittest.TestCase):

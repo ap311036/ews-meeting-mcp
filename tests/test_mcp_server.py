@@ -7,9 +7,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from ews_meeting_agent.audit import record_lifecycle_audit
-from ews_meeting_agent.confirmations import ConfirmationLedger
-from ews_meeting_agent.mcp_server import handle_request
+from ews_meeting_mcp.audit import record_lifecycle_audit
+from ews_meeting_mcp.confirmations import ConfirmationLedger
+from ews_meeting_mcp.mcp_server import handle_request
 
 
 class McpServerTests(unittest.TestCase):
@@ -99,7 +99,7 @@ class McpServerTests(unittest.TestCase):
             },
             clear=True,
         ):
-            with patch("ews_meeting_agent.config.load_dotenv"):
+            with patch("ews_meeting_mcp.config.load_dotenv"):
                 with patch("subprocess.run") as run:
                     run.side_effect = subprocess.CalledProcessError(44, ["security"])
 
@@ -121,7 +121,7 @@ class McpServerTests(unittest.TestCase):
 
     def test_setup_check_tool_returns_env_setup_payload_before_keychain_lookup(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
-            with patch("ews_meeting_agent.config.load_dotenv"):
+            with patch("ews_meeting_mcp.config.load_dotenv"):
                 with patch("subprocess.run") as run:
                     response = handle_request(
                         {
@@ -150,7 +150,7 @@ class McpServerTests(unittest.TestCase):
             },
             clear=True,
         ):
-            with patch("ews_meeting_agent.config.load_dotenv"):
+            with patch("ews_meeting_mcp.config.load_dotenv"):
                 response = handle_request(
                     {
                         "jsonrpc": "2.0",
@@ -165,7 +165,7 @@ class McpServerTests(unittest.TestCase):
         self.assertEqual(payload["next_action"], "ready")
 
     def test_keychain_status_tool_returns_status_payload(self) -> None:
-        with patch("ews_meeting_agent.agent_tools.keychain_status") as status:
+        with patch("ews_meeting_mcp.agent_tools.keychain_status") as status:
             status.return_value = {
                 "configured": False,
                 "source": "missing",
@@ -193,7 +193,7 @@ class McpServerTests(unittest.TestCase):
         self.assertIn(payload["setup_command"], payload["user_message"])
 
     def test_ews_tools_preflight_setup_before_doing_work(self) -> None:
-        with patch("ews_meeting_agent.agent_tools.ews_setup_check") as status:
+        with patch("ews_meeting_mcp.agent_tools.ews_setup_check") as status:
             status.return_value = {
                 "ready": False,
                 "error_code": "credentials_missing",
@@ -205,7 +205,7 @@ class McpServerTests(unittest.TestCase):
                 "required_action": "show_setup_command",
                 "user_message": "請執行：\nsecurity add-generic-password ...",
             }
-            with patch("ews_meeting_agent.agent_tools.ews_resolve_attendees") as resolve:
+            with patch("ews_meeting_mcp.agent_tools.ews_resolve_attendees") as resolve:
                 response = handle_request(
                     {
                         "jsonrpc": "2.0",
@@ -228,7 +228,7 @@ class McpServerTests(unittest.TestCase):
     def test_lifecycle_preflight_setup_error_is_audited(self) -> None:
         with tempfile.TemporaryDirectory() as state_dir:
             with patch.dict(os.environ, {"EWS_MEETING_AGENT_STATE_DIR": state_dir}, clear=False):
-                with patch("ews_meeting_agent.agent_tools.ews_setup_check") as status:
+                with patch("ews_meeting_mcp.agent_tools.ews_setup_check") as status:
                     status.return_value = {
                         "ready": False,
                         "error_code": "credentials_missing",
@@ -340,7 +340,7 @@ class McpServerTests(unittest.TestCase):
         self.assertIn("3-1", [option["value"] for option in payload["options"]])
 
     def test_list_rooms_source_static_does_not_preflight_credentials(self) -> None:
-        with patch("ews_meeting_agent.agent_tools.keychain_status") as status:
+        with patch("ews_meeting_mcp.agent_tools.keychain_status") as status:
             response = handle_request(
                 {
                     "jsonrpc": "2.0",
@@ -376,7 +376,7 @@ class McpServerTests(unittest.TestCase):
                     "name": "ews_create_meeting_preview",
                     "arguments": {
                         "subject": "Project sync",
-                        "attendees": ["eason.lin@linebank.com.tw"],
+                        "attendees": ["eason.lin@example.com"],
                         "start": "2026-06-15T11:00:00+08:00",
                         "end": "2026-06-15T11:30:00+08:00",
                     },
@@ -399,7 +399,7 @@ class McpServerTests(unittest.TestCase):
                     "name": "ews_create_meeting_confirmed",
                     "arguments": {
                         "subject": "Project sync",
-                        "attendees": ["eason.lin@linebank.com.tw"],
+                        "attendees": ["eason.lin@example.com"],
                         "start": "2026-06-15T11:00:00+08:00",
                         "end": "2026-06-15T11:30:00+08:00",
                         "confirm": False,
@@ -419,7 +419,7 @@ class McpServerTests(unittest.TestCase):
                     action="create_meeting",
                     result={"created": {"id": "event-1", "changekey": "ck-1"}},
                 )
-                with patch("ews_meeting_agent.agent_tools.ews_setup_check") as setup:
+                with patch("ews_meeting_mcp.agent_tools.ews_setup_check") as setup:
                     setup.return_value = {"ready": False, "error_code": "credentials_missing"}
                     response = handle_request(
                         {
@@ -430,7 +430,7 @@ class McpServerTests(unittest.TestCase):
                                 "name": "ews_create_meeting_confirmed",
                                 "arguments": {
                                     "subject": "Project sync",
-                                    "attendees": ["eason.lin@linebank.com.tw"],
+                                    "attendees": ["eason.lin@example.com"],
                                     "start": "2026-06-15T11:00:00+08:00",
                                     "end": "2026-06-15T11:30:00+08:00",
                                     "confirm": True,
@@ -447,7 +447,7 @@ class McpServerTests(unittest.TestCase):
         setup.assert_not_called()
 
     def test_confirmed_tool_missing_confirmation_id_bypasses_setup_preflight(self) -> None:
-        with patch("ews_meeting_agent.agent_tools.ews_setup_check") as setup:
+        with patch("ews_meeting_mcp.agent_tools.ews_setup_check") as setup:
             setup.return_value = {"ready": False, "error_code": "credentials_missing"}
             response = handle_request(
                 {
@@ -458,7 +458,7 @@ class McpServerTests(unittest.TestCase):
                         "name": "ews_create_meeting_confirmed",
                         "arguments": {
                             "subject": "Project sync",
-                            "attendees": ["eason.lin@linebank.com.tw"],
+                            "attendees": ["eason.lin@example.com"],
                             "start": "2026-06-15T11:00:00+08:00",
                             "end": "2026-06-15T11:30:00+08:00",
                             "confirm": True,
@@ -479,7 +479,7 @@ class McpServerTests(unittest.TestCase):
                 handle.write("{not-json")
 
             with patch.dict(os.environ, {"EWS_MEETING_AGENT_STATE_DIR": state_dir}, clear=True):
-                with patch("ews_meeting_agent.agent_tools.ews_setup_check") as setup:
+                with patch("ews_meeting_mcp.agent_tools.ews_setup_check") as setup:
                     setup.return_value = {"ready": False, "error_code": "credentials_missing"}
                     response = handle_request(
                         {
@@ -490,7 +490,7 @@ class McpServerTests(unittest.TestCase):
                                 "name": "ews_create_meeting_confirmed",
                                 "arguments": {
                                     "subject": "Project sync",
-                                    "attendees": ["eason.lin@linebank.com.tw"],
+                                    "attendees": ["eason.lin@example.com"],
                                     "start": "2026-06-15T11:00:00+08:00",
                                     "end": "2026-06-15T11:30:00+08:00",
                                     "confirm": True,

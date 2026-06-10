@@ -3,15 +3,15 @@ from __future__ import annotations
 from datetime import datetime
 import unittest
 
-from ews_meeting_agent.meeting import MeetingRequest, build_meeting_preview, render_body_for_format
+from ews_meeting_mcp.meeting import MeetingRequest, build_meeting_preview, render_body_for_format
 
 
 class MeetingTests(unittest.TestCase):
     def test_build_meeting_preview_marks_dry_run_until_confirmed(self) -> None:
         request = MeetingRequest(
             subject="Project sync",
-            attendees=["eason.lin@linebank.com.tw"],
-            rooms=["3-1MeetingRoom@linebank.com.tw"],
+            attendees=["eason.lin@example.com"],
+            rooms=["3-1MeetingRoom@example.com"],
             start=datetime.fromisoformat("2026-06-15T11:00:00+08:00"),
             end=datetime.fromisoformat("2026-06-15T11:30:00+08:00"),
             body="Discuss next steps",
@@ -23,13 +23,13 @@ class MeetingTests(unittest.TestCase):
         self.assertEqual(preview["action"], "dry_run")
         self.assertFalse(preview["will_send_invites"])
         self.assertEqual(preview["subject"], "Project sync")
-        self.assertEqual(preview["attendees"], ["eason.lin@linebank.com.tw"])
-        self.assertEqual(preview["rooms"], ["3-1MeetingRoom@linebank.com.tw"])
+        self.assertEqual(preview["attendees"], ["eason.lin@example.com"])
+        self.assertEqual(preview["rooms"], ["3-1MeetingRoom@example.com"])
 
     def test_build_meeting_preview_marks_confirmed_send(self) -> None:
         request = MeetingRequest(
             subject="Project sync",
-            attendees=["eason.lin@linebank.com.tw"],
+            attendees=["eason.lin@example.com"],
             start=datetime.fromisoformat("2026-06-15T11:00:00+08:00"),
             end=datetime.fromisoformat("2026-06-15T11:30:00+08:00"),
         )
@@ -42,7 +42,7 @@ class MeetingTests(unittest.TestCase):
     def test_preview_defaults_body_format_to_html(self) -> None:
         request = MeetingRequest(
             subject="Project sync",
-            attendees=["eason.lin@linebank.com.tw"],
+            attendees=["eason.lin@example.com"],
             start=datetime.fromisoformat("2026-06-15T11:00:00+08:00"),
             end=datetime.fromisoformat("2026-06-15T11:30:00+08:00"),
         )

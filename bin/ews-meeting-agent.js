@@ -26,9 +26,9 @@ export function venvPythonPath(venvDir, platform = process.platform) {
 
 export function buildPythonArgs(argv) {
   if (argv[0] === "--cli") {
-    return ["-m", "ews_meeting_agent.cli", ...argv.slice(1)];
+    return ["-m", "ews_meeting_mcp.cli", ...argv.slice(1)];
   }
-  return ["-m", "ews_meeting_agent.mcp_server", ...argv];
+  return ["-m", "ews_meeting_mcp.mcp_server", ...argv];
 }
 
 function main() {
@@ -68,6 +68,9 @@ function main() {
 }
 
 function cacheBaseDir() {
+  if (process.env.EWS_MEETING_MCP_CACHE_DIR) {
+    return process.env.EWS_MEETING_MCP_CACHE_DIR;
+  }
   if (process.env.EWS_MEETING_AGENT_CACHE_DIR) {
     return process.env.EWS_MEETING_AGENT_CACHE_DIR;
   }
@@ -84,6 +87,9 @@ function cacheBaseDir() {
 }
 
 function ensurePythonRuntime(packageRoot, cacheDir) {
+  if (process.env.EWS_MEETING_MCP_PYTHON) {
+    return process.env.EWS_MEETING_MCP_PYTHON;
+  }
   if (process.env.EWS_MEETING_AGENT_PYTHON) {
     return process.env.EWS_MEETING_AGENT_PYTHON;
   }
