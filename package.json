@@ -1,6 +1,7 @@
 {
   "name": "ews-meeting-mcp",
-  "version": "0.1.16",
+  "version": "0.1.17",
+  "mcpName": "io.github.ap311036/ews-meeting-mcp",
   "description": "MCP server and CLI for scheduling meetings through on-prem Exchange EWS.",
   "type": "module",
   "repository": {
@@ -17,6 +18,7 @@
     "src/**/*.py",
     "skills/**/SKILL.md",
     "README.md",
+    "server.json",
     "requirements.txt",
     "pyproject.toml",
     "setup.py",

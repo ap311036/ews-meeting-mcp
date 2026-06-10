@@ -1,0 +1,76 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.ap311036/ews-meeting-mcp",
+  "title": "EWS Meeting MCP",
+  "description": "Safely schedule Outlook meetings on on-prem Exchange EWS with preview-confirmed writes.",
+  "version": "0.1.17",
+  "websiteUrl": "https://github.com/ap311036/ews-meeting-mcp",
+  "repository": {
+    "url": "https://github.com/ap311036/ews-meeting-mcp",
+    "source": "github",
+    "id": "1263559018"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "ews-meeting-mcp",
+      "version": "0.1.17",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "EWS_ENDPOINT",
+          "description": "Exchange EWS endpoint, for example https://mail.company.com/EWS/Exchange.asmx",
+          "isRequired": true,
+          "format": "string"
+        },
+        {
+          "name": "EWS_EMAIL",
+          "description": "Mailbox email address used as the meeting organizer.",
+          "isRequired": true,
+          "format": "string"
+        },
+        {
+          "name": "EWS_USERNAME",
+          "description": "Exchange login username, often DOMAIN\\username for NTLM.",
+          "isRequired": true,
+          "format": "string"
+        },
+        {
+          "name": "EWS_PASSWORD",
+          "description": "Exchange password. Prefer macOS Keychain variables when possible.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "EWS_PASSWORD_KEYCHAIN_SERVICE",
+          "description": "Optional macOS Keychain service name for reading the password locally.",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
+          "name": "EWS_PASSWORD_KEYCHAIN_ACCOUNT",
+          "description": "Optional macOS Keychain account. Defaults to EWS_USERNAME when omitted.",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
+          "name": "EWS_AUTH_TYPE",
+          "description": "Exchange auth type. Usually NTLM for on-prem Exchange.",
+          "isRequired": false,
+          "format": "string",
+          "default": "NTLM"
+        },
+        {
+          "name": "EWS_TIMEZONE",
+          "description": "IANA timezone for calendar operations.",
+          "isRequired": false,
+          "format": "string",
+          "default": "Asia/Taipei"
+        }
+      ]
+    }
+  ]
+}
