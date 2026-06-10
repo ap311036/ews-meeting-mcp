@@ -116,6 +116,9 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(status["account"], "bk00325")
         self.assertIn("security add-generic-password", status["setup_command"])
         self.assertIn("-a bk00325", status["setup_command"])
+        self.assertEqual(status["required_action"], "show_setup_command")
+        self.assertIn("顯示並執行", status["user_message"])
+        self.assertIn(status["setup_command"], status["user_message"])
 
 
 if __name__ == "__main__":

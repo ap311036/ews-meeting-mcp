@@ -9,7 +9,7 @@ from typing import Any, Callable
 from . import agent_tools
 
 
-SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.10"}
+SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.11"}
 
 TOOL_HANDLERS: dict[str, Callable[..., Any]] = {
     "ews_keychain_status": agent_tools.ews_keychain_status,
@@ -54,6 +54,9 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
                 "capabilities": {"tools": {}},
                 "serverInfo": SERVER_INFO,
                 "instructions": (
+                    "Before any EWS scheduling, call ews_keychain_status. If it returns "
+                    "required_action=show_setup_command, show the setup_command verbatim in a "
+                    "fenced shell block and do not continue until the user has run it. "
                     "Resolve non-email attendee names with ews_resolve_attendees before scheduling. "
                     "Use ews_suggest_slots with resolved email addresses and candidate rooms when a room "
                     "is needed. Before sending invitations, show the preview from "
@@ -190,7 +193,8 @@ def _tool_defs() -> list[dict[str, Any]]:
             "name": "ews_keychain_status",
             "description": (
                 "Check whether EWS password credentials are available from environment variables "
-                "or macOS Keychain without revealing the password."
+                "or macOS Keychain without revealing the password. If missing, returns required_action "
+                "and setup_command that must be shown verbatim to the user."
             ),
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
         },

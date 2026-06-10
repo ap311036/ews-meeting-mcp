@@ -9,7 +9,7 @@ Use the `ews-meeting-mcp` MCP tools to schedule meetings through an on-prem Exch
 
 ## Workflow
 
-1. At the start of a scheduling session, call `ews_keychain_status`. If it returns `configured: false`, run or show its `setup_command` so the user can enter the password into macOS Keychain, then call `ews_keychain_status` again before continuing.
+1. At the start of a scheduling session, call `ews_keychain_status`. If it returns `required_action: "show_setup_command"` or `configured: false`, show its `setup_command` verbatim in a fenced `bash` block and stop. Do not summarize it as "set EWS_PASSWORD or Keychain"; do not continue with EWS tools until the user says they ran it. Then call `ews_keychain_status` again before continuing.
 2. Parse the user's request into attendees, candidate rooms, date range, duration, subject, body, and location.
 3. If any attendee is not a complete email address, call `ews_resolve_attendees` first.
 4. Use exactly resolved emails for scheduling. If a name has zero matches or multiple matches, show the candidates and ask the user to choose before continuing.
@@ -31,7 +31,7 @@ Use the `ews-meeting-mcp` MCP tools to schedule meetings through an on-prem Exch
 ## Tool Notes
 
 - Use `ews_resolve_attendees` whenever the user gives names, aliases, or mixed name/email attendee lists.
-- Use `ews_keychain_status` before the first EWS operation in a session. It never returns the password.
+- Use `ews_keychain_status` before the first EWS operation in a session. It never returns the password. If it returns `setup_command`, show that exact command verbatim.
 - Use `ews_list_rooms` to present structured meeting-room choices before asking the user to choose a room.
 - Scheduling and meeting tools also auto-resolve non-email attendees; if they report ambiguity or not found, ask the user to choose or provide the exact email.
 - Use multiple attendee emails and candidate room aliases in one `ews_suggest_slots` call.

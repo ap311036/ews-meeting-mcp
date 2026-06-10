@@ -184,7 +184,7 @@ Available and recommended tools for the agent:
 - `ews_create_meeting_preview(...)`
 - `ews_create_meeting_confirmed(...)` guarded by human approval
 
-Do not pass EWS passwords through the LLM. At the start of a scheduling session, the agent should call `ews_keychain_status`. If it returns `configured: false`, run or show the returned `setup_command` so the user can enter the password into macOS Keychain, then call `ews_keychain_status` again before continuing.
+Do not pass EWS passwords through the LLM. At the start of a scheduling session, the agent should call `ews_keychain_status`. If it returns `required_action: "show_setup_command"` or `configured: false`, show the returned `setup_command` verbatim in a fenced shell block and stop until the user says they ran it. Then call `ews_keychain_status` again before continuing.
 
 If a meeting request contains attendee names or aliases instead of complete email addresses, call `ews_resolve_attendees` first and use only the selected resolved emails for availability checks and meeting creation. The scheduling and meeting tools also auto-resolve non-email attendees before calling EWS. If a name is ambiguous or not found, ask the user to choose or provide the exact email before continuing.
 
@@ -257,7 +257,7 @@ MCP config for an npm-published package:
   "mcpServers": {
     "ews-meeting-mcp": {
       "command": "npx",
-      "args": ["-y", "ews-meeting-mcp@0.1.10"],
+      "args": ["-y", "ews-meeting-mcp@0.1.11"],
       "env": {
         "EWS_ENDPOINT": "https://mail.company.com/EWS/Exchange.asmx",
         "EWS_EMAIL": "your_user@company.com",

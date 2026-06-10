@@ -37,6 +37,8 @@ class McpServerTests(unittest.TestCase):
                 "service": "ews-meeting-mcp",
                 "account": "bk00325",
                 "setup_command": "security add-generic-password ...",
+                "required_action": "show_setup_command",
+                "user_message": "請執行：\nsecurity add-generic-password ...",
             }
 
             response = handle_request(
@@ -52,6 +54,8 @@ class McpServerTests(unittest.TestCase):
         self.assertFalse(payload["configured"])
         self.assertEqual(payload["source"], "missing")
         self.assertIn("setup_command", payload)
+        self.assertEqual(payload["required_action"], "show_setup_command")
+        self.assertIn(payload["setup_command"], payload["user_message"])
 
     def test_suggest_slots_tool_schema_accepts_rooms(self) -> None:
         response = handle_request({"jsonrpc": "2.0", "id": 12, "method": "tools/list"})

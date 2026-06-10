@@ -108,18 +108,19 @@ def keychain_status() -> dict[str, Any]:
         status["message"] = (
             "Set EWS_USERNAME or EWS_PASSWORD_KEYCHAIN_ACCOUNT before checking Keychain."
         )
+        status["required_action"] = "fix_mcp_env"
         return status
 
     try:
         result = _run_keychain_lookup(service=service, account=account)
     except (FileNotFoundError, subprocess.CalledProcessError):
-        status["setup_command"] = _keychain_setup_command(service=service, account=account)
+        _add_keychain_setup(status, service=service, account=account)
         return status
 
     if result.stdout.strip():
         status.update({"configured": True, "source": "keychain"})
     else:
-        status["setup_command"] = _keychain_setup_command(service=service, account=account)
+        _add_keychain_setup(status, service=service, account=account)
     return status
 
 
@@ -156,6 +157,17 @@ def _keychain_setup_command(*, service: str, account: str) -> str:
             ),
             "unset EWS_PASSWORD",
         ]
+    )
+
+
+def _add_keychain_setup(status: dict[str, Any], *, service: str, account: str) -> None:
+    setup_command = _keychain_setup_command(service=service, account=account)
+    status["required_action"] = "show_setup_command"
+    status["setup_command"] = setup_command
+    status["user_message"] = (
+        "EWS 密碼還沒有設定在 macOS Keychain。請顯示並執行下面這段指令，"
+        "讓使用者在終端機輸入密碼。不要要求使用者把密碼貼到聊天或 mcp.json。\n\n"
+        f"```bash\n{setup_command}\n```"
     )
 
 
