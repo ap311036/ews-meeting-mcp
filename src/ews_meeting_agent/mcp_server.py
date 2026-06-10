@@ -9,7 +9,7 @@ from typing import Any, Callable
 from . import agent_tools
 
 
-SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.11"}
+SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.12"}
 
 TOOL_HANDLERS: dict[str, Callable[..., Any]] = {
     "ews_keychain_status": agent_tools.ews_keychain_status,
@@ -21,6 +21,15 @@ TOOL_HANDLERS: dict[str, Callable[..., Any]] = {
     "ews_suggest_slots": agent_tools.ews_suggest_slots,
     "ews_create_meeting_preview": agent_tools.ews_create_meeting_preview,
     "ews_create_meeting_confirmed": agent_tools.ews_create_meeting_confirmed,
+}
+
+EWS_CREDENTIAL_TOOLS = {
+    "ews_probe",
+    "ews_list_calendar",
+    "ews_resolve_attendees",
+    "ews_get_free_busy",
+    "ews_suggest_slots",
+    "ews_create_meeting_confirmed",
 }
 
 
@@ -78,6 +87,11 @@ def _handle_tool_call(request_id: Any, params: dict[str, Any]) -> dict[str, Any]
     handler = TOOL_HANDLERS.get(name)
     if handler is None:
         return _tool_error(request_id, f"Unknown tool: {name}")
+
+    if name in EWS_CREDENTIAL_TOOLS and _needs_credential_preflight(name, arguments):
+        credential_status = agent_tools.ews_keychain_status()
+        if not credential_status.get("configured"):
+            return _tool_json_error(request_id, credential_status)
 
     try:
         result = handler(**arguments)
@@ -278,6 +292,27 @@ def _tool_error(request_id: Any, message: str) -> dict[str, Any]:
         request_id,
         {"content": [{"type": "text", "text": message}], "isError": True},
     )
+
+
+def _tool_json_error(request_id: Any, payload: dict[str, Any]) -> dict[str, Any]:
+    return _result_response(
+        request_id,
+        {
+            "content": [
+                {
+                    "type": "text",
+                    "text": json.dumps(payload, ensure_ascii=False, indent=2, default=str),
+                }
+            ],
+            "isError": True,
+        },
+    )
+
+
+def _needs_credential_preflight(name: Any, arguments: dict[str, Any]) -> bool:
+    if name == "ews_create_meeting_confirmed" and arguments.get("confirm") is not True:
+        return False
+    return True
 
 
 def _suppress_known_warnings() -> None:

@@ -21,6 +21,7 @@ class SkillContractTests(unittest.TestCase):
         self.assertIn("setup_command", text)
         self.assertIn("required_action", text)
         self.assertIn("verbatim", text)
+        self.assertIn("do not ask the user for attendee email addresses", text)
         self.assertIn("ews_list_rooms", text)
         self.assertIn("structured meeting-room choices", text)
 

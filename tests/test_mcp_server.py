@@ -57,6 +57,36 @@ class McpServerTests(unittest.TestCase):
         self.assertEqual(payload["required_action"], "show_setup_command")
         self.assertIn(payload["setup_command"], payload["user_message"])
 
+    def test_ews_tools_preflight_keychain_before_doing_work(self) -> None:
+        with patch("ews_meeting_agent.agent_tools.keychain_status") as status:
+            status.return_value = {
+                "configured": False,
+                "source": "missing",
+                "service": "ews-meeting-mcp",
+                "account": "bk00325",
+                "setup_command": "security add-generic-password ...",
+                "required_action": "show_setup_command",
+                "user_message": "請執行：\nsecurity add-generic-password ...",
+            }
+            with patch("ews_meeting_agent.agent_tools.ews_resolve_attendees") as resolve:
+                response = handle_request(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 16,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "ews_resolve_attendees",
+                            "arguments": {"attendees": ["Eason", "Riva"]},
+                        },
+                    }
+                )
+
+        self.assertTrue(response["result"]["isError"])
+        payload = _tool_payload(response)
+        self.assertEqual(payload["required_action"], "show_setup_command")
+        self.assertIn("setup_command", payload)
+        resolve.assert_not_called()
+
     def test_suggest_slots_tool_schema_accepts_rooms(self) -> None:
         response = handle_request({"jsonrpc": "2.0", "id": 12, "method": "tools/list"})
 

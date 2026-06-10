@@ -32,6 +32,7 @@ Use the `ews-meeting-mcp` MCP tools to schedule meetings through an on-prem Exch
 
 - Use `ews_resolve_attendees` whenever the user gives names, aliases, or mixed name/email attendee lists.
 - Use `ews_keychain_status` before the first EWS operation in a session. It never returns the password. If it returns `setup_command`, show that exact command verbatim.
+- If any EWS tool returns `required_action: "show_setup_command"`, show the returned `setup_command` verbatim and do not ask the user for attendee email addresses as a workaround.
 - Use `ews_list_rooms` to present structured meeting-room choices before asking the user to choose a room.
 - Scheduling and meeting tools also auto-resolve non-email attendees; if they report ambiguity or not found, ask the user to choose or provide the exact email.
 - Use multiple attendee emails and candidate room aliases in one `ews_suggest_slots` call.

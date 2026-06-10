@@ -186,6 +186,8 @@ Available and recommended tools for the agent:
 
 Do not pass EWS passwords through the LLM. At the start of a scheduling session, the agent should call `ews_keychain_status`. If it returns `required_action: "show_setup_command"` or `configured: false`, show the returned `setup_command` verbatim in a fenced shell block and stop until the user says they ran it. Then call `ews_keychain_status` again before continuing.
 
+The MCP server also preflights EWS-dependent tools. If an agent accidentally calls `ews_resolve_attendees`, `ews_get_free_busy`, `ews_suggest_slots`, or another EWS tool before credentials are available, the server returns the same Keychain setup payload instead of continuing.
+
 If a meeting request contains attendee names or aliases instead of complete email addresses, call `ews_resolve_attendees` first and use only the selected resolved emails for availability checks and meeting creation. The scheduling and meeting tools also auto-resolve non-email attendees before calling EWS. If a name is ambiguous or not found, ask the user to choose or provide the exact email before continuing.
 
 If the user needs to choose a room, call `ews_list_rooms` first and present its structured `options`. The built-in room aliases are `2-11`, `2-13`, `2-14`, `3-1`, `3-2`, and `3-4`; each maps to the matching `MeetingRoom@linebank.com.tw` resource mailbox. If a meeting requires a specific room, pass candidate rooms to `ews_suggest_slots` in `rooms`. If the user wants any suitable room, call `ews_suggest_slots` with `require_room: true` and omit `rooms`; the tool searches all built-in rooms and filters rooms with known capacity below the attendee count. Room name suffixes such as `(6P)` mean six persons. Suggestions include `available_rooms`, and the selected room should be passed to the preview and confirmed meeting tools in `rooms` so Exchange books it as a resource.
@@ -257,7 +259,7 @@ MCP config for an npm-published package:
   "mcpServers": {
     "ews-meeting-mcp": {
       "command": "npx",
-      "args": ["-y", "ews-meeting-mcp@0.1.11"],
+      "args": ["-y", "ews-meeting-mcp@0.1.12"],
       "env": {
         "EWS_ENDPOINT": "https://mail.company.com/EWS/Exchange.asmx",
         "EWS_EMAIL": "your_user@company.com",
