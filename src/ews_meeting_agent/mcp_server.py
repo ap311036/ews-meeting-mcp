@@ -9,12 +9,13 @@ from typing import Any, Callable
 from . import agent_tools
 
 
-SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.9"}
+SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.10"}
 
 TOOL_HANDLERS: dict[str, Callable[..., Any]] = {
     "ews_keychain_status": agent_tools.ews_keychain_status,
     "ews_probe": agent_tools.ews_probe,
     "ews_list_calendar": agent_tools.ews_list_calendar,
+    "ews_list_rooms": agent_tools.ews_list_rooms,
     "ews_resolve_attendees": agent_tools.ews_resolve_attendees,
     "ews_get_free_busy": agent_tools.ews_get_free_busy,
     "ews_suggest_slots": agent_tools.ews_suggest_slots,
@@ -204,6 +205,21 @@ def _tool_defs() -> list[dict[str, Any]]:
             "inputSchema": {
                 "type": "object",
                 "properties": {"days": {"type": "integer", "default": 7, "minimum": 1}},
+                "additionalProperties": False,
+            },
+        },
+        {
+            "name": "ews_list_rooms",
+            "description": "List built-in meeting room choices as structured options for user selection.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "attendee_count": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Optional attendee count used to hide rooms with known insufficient capacity.",
+                    }
+                },
                 "additionalProperties": False,
             },
         },

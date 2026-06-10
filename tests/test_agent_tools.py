@@ -223,8 +223,22 @@ class AgentToolTests(unittest.TestCase):
         rooms = agent_tools.default_room_options()
 
         room_by_email = {room["email"]: room for room in rooms}
+        self.assertEqual(room_by_email["3-1MeetingRoom@linebank.com.tw"]["alias"], "3-1")
         self.assertEqual(room_by_email["3-1MeetingRoom@linebank.com.tw"]["capacity"], 12)
         self.assertEqual(room_by_email["3-2MeetingRoom@linebank.com.tw"]["capacity"], 6)
+
+    def test_list_rooms_returns_structured_options_for_user_selection(self) -> None:
+        result = agent_tools.ews_list_rooms(attendee_count=7)
+
+        self.assertEqual(result["selection_hint"], "Ask the user to choose one room value, or choose no specific room.")
+        values = [option["value"] for option in result["options"]]
+        self.assertIn("3-1", values)
+        self.assertNotIn("3-2", values)
+        self.assertNotIn("3-4", values)
+        first = result["options"][0]
+        self.assertIn("label", first)
+        self.assertIn("email", first)
+        self.assertIn("capacity", first)
 
 
 if __name__ == "__main__":

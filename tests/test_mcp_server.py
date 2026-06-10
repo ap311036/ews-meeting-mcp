@@ -14,6 +14,7 @@ class McpServerTests(unittest.TestCase):
         self.assertEqual(response["id"], 1)
         tool_names = [tool["name"] for tool in response["result"]["tools"]]
         self.assertIn("ews_keychain_status", tool_names)
+        self.assertIn("ews_list_rooms", tool_names)
         self.assertIn("ews_resolve_attendees", tool_names)
         self.assertIn("ews_suggest_slots", tool_names)
         self.assertIn("ews_create_meeting_preview", tool_names)
@@ -60,6 +61,30 @@ class McpServerTests(unittest.TestCase):
 
         self.assertIn("rooms", tool["inputSchema"]["properties"])
         self.assertIn("require_room", tool["inputSchema"]["properties"])
+
+    def test_list_rooms_tool_schema_accepts_attendee_count(self) -> None:
+        response = handle_request({"jsonrpc": "2.0", "id": 14, "method": "tools/list"})
+
+        tools = response["result"]["tools"]
+        tool = next(item for item in tools if item["name"] == "ews_list_rooms")
+
+        self.assertIn("meeting room choices", tool["description"])
+        self.assertIn("attendee_count", tool["inputSchema"]["properties"])
+
+    def test_list_rooms_tool_returns_structured_options(self) -> None:
+        response = handle_request(
+            {
+                "jsonrpc": "2.0",
+                "id": 15,
+                "method": "tools/call",
+                "params": {"name": "ews_list_rooms", "arguments": {"attendee_count": 7}},
+            }
+        )
+
+        payload = _tool_payload(response)
+        self.assertIn("options", payload)
+        self.assertIn("selection_hint", payload)
+        self.assertIn("3-1", [option["value"] for option in payload["options"]])
 
     def test_resolve_attendees_tool_schema_accepts_names_or_emails(self) -> None:
         response = handle_request({"jsonrpc": "2.0", "id": 11, "method": "tools/list"})

@@ -13,20 +13,23 @@ from .scheduler import TimeBlock, overlaps, parse_time_range, suggest_slots
 ClientFactory = Callable[[], EwsClient]
 
 KNOWN_ROOMS: dict[str, dict[str, Any]] = {
-    "2-11": {"name": "2-11 Meeting Room", "email": "2-11MeetingRoom@linebank.com.tw"},
-    "2-13": {"name": "2-13 Meeting Room", "email": "2-13MeetingRoom@linebank.com.tw"},
-    "2-14": {"name": "2-14 Meeting Room", "email": "2-14MeetingRoom@linebank.com.tw"},
+    "2-11": {"alias": "2-11", "name": "2-11 Meeting Room", "email": "2-11MeetingRoom@linebank.com.tw"},
+    "2-13": {"alias": "2-13", "name": "2-13 Meeting Room", "email": "2-13MeetingRoom@linebank.com.tw"},
+    "2-14": {"alias": "2-14", "name": "2-14 Meeting Room", "email": "2-14MeetingRoom@linebank.com.tw"},
     "3-1": {
+        "alias": "3-1",
         "name": "3-1 Meeting Room(12P)",
         "email": "3-1MeetingRoom@linebank.com.tw",
         "capacity": 12,
     },
     "3-2": {
+        "alias": "3-2",
         "name": "3-2 Meeting Room(6P)",
         "email": "3-2MeetingRoom@linebank.com.tw",
         "capacity": 6,
     },
     "3-4": {
+        "alias": "3-4",
         "name": "3-4 Meeting Room(6P)",
         "email": "3-4MeetingRoom@linebank.com.tw",
         "capacity": 6,
@@ -67,6 +70,16 @@ def ews_resolve_attendees(
 
 def default_room_options() -> list[dict[str, Any]]:
     return [dict(room) for room in KNOWN_ROOMS.values()]
+
+
+def ews_list_rooms(attendee_count: int | None = None) -> dict[str, Any]:
+    rooms = default_room_options()
+    if attendee_count is not None:
+        rooms = _rooms_with_capacity(rooms, attendee_count=attendee_count)
+    return {
+        "selection_hint": "Ask the user to choose one room value, or choose no specific room.",
+        "options": [_room_selection_option(room) for room in rooms],
+    }
 
 
 def ews_get_free_busy(
@@ -349,6 +362,17 @@ def _rooms_with_capacity(rooms: list[dict[str, Any]], *, attendee_count: int) ->
             continue
         filtered.append(room)
     return filtered
+
+
+def _room_selection_option(room: dict[str, Any]) -> dict[str, Any]:
+    option = {
+        "label": room["name"],
+        "value": room.get("alias", room["email"]),
+        "email": room["email"],
+        "name": room["name"],
+        "capacity": room.get("capacity"),
+    }
+    return option
 
 
 def _room_capacity(name: str) -> int | None:
