@@ -9,7 +9,7 @@ from typing import Any, Callable
 from . import agent_tools
 
 
-SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.7"}
+SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.8"}
 
 TOOL_HANDLERS: dict[str, Callable[..., Any]] = {
     "ews_probe": agent_tools.ews_probe,

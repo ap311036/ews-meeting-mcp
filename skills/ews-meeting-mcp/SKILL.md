@@ -23,7 +23,7 @@ Use the `ews-meeting-mcp` MCP tools to schedule meetings through an on-prem Exch
 ## Safety
 
 - Never call `ews_create_meeting_confirmed` without explicit user confirmation.
-- Do not put EWS passwords in prompts or messages. The MCP server reads credentials from `.env` or environment variables.
+- Do not put EWS passwords in prompts or messages. The MCP server reads credentials from `.env`, environment variables, or macOS Keychain.
 - Do not add the organizer as an attendee unless the user explicitly asks; Exchange creates the organizer's calendar item automatically.
 - If Outlook does not show a newly created meeting immediately, ask the user to sync or restart Outlook before assuming the event is missing.
 

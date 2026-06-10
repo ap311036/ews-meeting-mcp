@@ -41,6 +41,24 @@ EWS_TIMEZONE=Asia/Taipei
 
 The CLI auto-loads `.env` from the current directory. Environment variables already present in the shell take precedence.
 
+On macOS, you can keep the password in Keychain instead of `.env` or `mcp.json`:
+
+```bash
+read -rsp "EWS password: " EWS_PASSWORD
+echo
+security add-generic-password -U -s ews-meeting-mcp -a 'DOMAIN\your_user' -w "$EWS_PASSWORD"
+unset EWS_PASSWORD
+```
+
+Then omit `EWS_PASSWORD`. The tool will read Keychain using:
+
+```bash
+EWS_PASSWORD_KEYCHAIN_SERVICE=ews-meeting-mcp
+EWS_PASSWORD_KEYCHAIN_ACCOUNT='DOMAIN\your_user'
+```
+
+If `EWS_PASSWORD_KEYCHAIN_ACCOUNT` is omitted, `EWS_USERNAME` is used. `EWS_PASSWORD` always takes precedence when it is set.
+
 Use `EWS_AUTH_TYPE=BASIC` only if IT confirms Basic auth is enabled and the endpoint is protected by HTTPS.
 
 ## Read-only smoke tests
@@ -197,7 +215,7 @@ Example MCP config:
 }
 ```
 
-The server reads EWS credentials from `.env` in the working directory or from environment variables.
+The server reads EWS credentials from `.env` in the working directory, from environment variables, or from macOS Keychain when `EWS_PASSWORD` is not set.
 
 ## npx / npm package
 
@@ -238,7 +256,14 @@ MCP config for an npm-published package:
     "ews-meeting-mcp": {
       "command": "npx",
       "args": ["-y", "ews-meeting-mcp"],
-      "cwd": "/path/to/folder/with-env-file"
+      "env": {
+        "EWS_ENDPOINT": "https://mail.company.com/EWS/Exchange.asmx",
+        "EWS_EMAIL": "your_user@company.com",
+        "EWS_USERNAME": "DOMAIN\\your_user",
+        "EWS_PASSWORD_KEYCHAIN_SERVICE": "ews-meeting-mcp",
+        "EWS_AUTH_TYPE": "NTLM",
+        "EWS_TIMEZONE": "Asia/Taipei"
+      }
     }
   }
 }
