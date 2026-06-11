@@ -6,6 +6,7 @@ import json
 import warnings
 
 from .config import EwsConfig
+from .datetime_utils import parse_iso_datetime
 from .ews_client import EwsClient, default_window
 from .meeting import MeetingRequest, build_meeting_preview
 from .scheduler import parse_time_range, suggest_slots
@@ -120,7 +121,7 @@ def _add_window(parser: argparse.ArgumentParser) -> None:
 
 
 def _parse_window(args: argparse.Namespace) -> tuple[datetime, datetime]:
-    return datetime.fromisoformat(args.start), datetime.fromisoformat(args.end)
+    return parse_iso_datetime(args.start), parse_iso_datetime(args.end)
 
 
 def _parse_time(value: str) -> object:

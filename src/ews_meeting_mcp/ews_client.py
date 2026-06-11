@@ -6,6 +6,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from .config import EwsConfig
+from .datetime_utils import parse_iso_datetime
 from .errors import EwsToolError
 from .meeting import MeetingRequest, render_body_for_format
 from .scheduler import TimeBlock
@@ -520,7 +521,7 @@ def _event_matches_filters(
 def _coerce_datetime(value: Any) -> datetime:
     if isinstance(value, datetime):
         return value
-    return datetime.fromisoformat(str(value))
+    return parse_iso_datetime(str(value))
 
 
 def _send_disposition(enabled: bool) -> str:

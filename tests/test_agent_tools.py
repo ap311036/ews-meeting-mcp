@@ -329,6 +329,20 @@ class AgentToolTests(unittest.TestCase):
         self.assertNotIn("available_rooms", result[0])
         self.assertEqual(client.free_busy_by_attendee_calls, [])
 
+    def test_suggest_slots_accepts_rfc3339_z_datetimes(self) -> None:
+        client = FakeClient()
+
+        result = agent_tools.ews_suggest_slots(
+            attendees=["A", "B"],
+            start="2026-06-11T10:00:00Z",
+            end="2026-06-11T11:00:00Z",
+            duration_minutes=30,
+            limit=1,
+            client_factory=lambda: client,
+        )
+
+        self.assertEqual(result[0]["start"], "2026-06-11 10:00:00+00:00")
+
     def test_suggest_slots_uses_policy_defaults_when_scheduling_args_are_omitted(self) -> None:
         client = FakeClient()
         with tempfile.TemporaryDirectory() as tmpdir:

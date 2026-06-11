@@ -21,6 +21,8 @@ class McpServerTests(unittest.TestCase):
 
         self.assertEqual(response["result"]["serverInfo"]["name"], "ews-meeting-mcp")
         self.assertEqual(response["result"]["serverInfo"]["version"], package_version)
+        self.assertIn("interactive multiple-choice UI", response["result"]["instructions"])
+        self.assertIn("clickable choice controls", response["result"]["instructions"])
 
     def test_lists_tools(self) -> None:
         response = handle_request({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})

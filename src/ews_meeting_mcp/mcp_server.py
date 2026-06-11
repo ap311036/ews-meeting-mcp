@@ -12,7 +12,7 @@ from .confirmations import ConfirmationLedger
 from .errors import EwsToolError
 
 
-SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.17"}
+SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.18"}
 
 TOOL_HANDLERS: dict[str, Callable[..., Any]] = {
     "ews_keychain_status": agent_tools.ews_keychain_status,
@@ -93,6 +93,9 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
                     "user_message as-is, or show setup_command verbatim in a fenced shell block, and stop; "
                     "do not ask for attendee emails or continue scheduling until setup is ready. "
                     "Resolve non-email attendee names with ews_resolve_attendees before scheduling. "
+                    "When attendee, room, slot, or existing-event candidates require a user choice, "
+                    "prefer the host's interactive multiple-choice UI or clickable choice controls when "
+                    "available; otherwise show a short numbered list and wait for the user's selection. "
                     "Use ews_suggest_slots with resolved email addresses and candidate rooms when a room "
                     "is needed. Before sending invitations, show the preview from "
                     "ews_create_meeting_preview and ask the user to confirm, then pass the same "
@@ -156,8 +159,8 @@ def _meeting_schema(*, include_confirm: bool) -> dict[str, Any]:
             "default": [],
             "description": "Meeting room names, aliases, or email addresses.",
         },
-        "start": {"type": "string", "description": "ISO datetime with timezone"},
-        "end": {"type": "string", "description": "ISO datetime with timezone"},
+        "start": {"type": "string", "description": "ISO datetime with timezone. Prefer local offset such as +08:00; Z is accepted as UTC."},
+        "end": {"type": "string", "description": "ISO datetime with timezone. Prefer local offset such as +08:00; Z is accepted as UTC."},
         "body": {"type": "string", "default": ""},
         "body_format": {
             "type": "string",
@@ -191,8 +194,8 @@ def _free_busy_schema() -> dict[str, Any]:
         "type": "object",
         "properties": {
             "attendees": {"type": "array", "items": {"type": "string"}, "minItems": 1},
-            "start": {"type": "string", "description": "ISO datetime with timezone"},
-            "end": {"type": "string", "description": "ISO datetime with timezone"},
+            "start": {"type": "string", "description": "ISO datetime with timezone. Prefer local offset such as +08:00; Z is accepted as UTC."},
+            "end": {"type": "string", "description": "ISO datetime with timezone. Prefer local offset such as +08:00; Z is accepted as UTC."},
         },
         "required": ["attendees", "start", "end"],
         "additionalProperties": False,
@@ -203,8 +206,8 @@ def _find_calendar_events_schema() -> dict[str, Any]:
     return {
         "type": "object",
         "properties": {
-            "start": {"type": "string", "description": "ISO datetime with timezone"},
-            "end": {"type": "string", "description": "ISO datetime with timezone"},
+            "start": {"type": "string", "description": "ISO datetime with timezone. Prefer local offset such as +08:00; Z is accepted as UTC."},
+            "end": {"type": "string", "description": "ISO datetime with timezone. Prefer local offset such as +08:00; Z is accepted as UTC."},
             "subject_contains": {"type": "string", "description": "Optional case-insensitive subject filter."},
             "location_contains": {"type": "string", "description": "Optional case-insensitive location filter."},
             "organizer_email": {"type": "string", "description": "Optional exact organizer email filter."},
@@ -236,8 +239,8 @@ def _meeting_update_schema(*, include_confirm: bool) -> dict[str, Any]:
         "id": {"type": "string", "description": "Exact EWS calendar item id from ews_find_calendar_events."},
         "changekey": {"type": "string", "description": "Exact changekey returned with the EWS item id."},
         "subject": {"type": "string", "description": "Optional replacement subject."},
-        "start": {"type": "string", "description": "Optional replacement ISO datetime with timezone."},
-        "end": {"type": "string", "description": "Optional replacement ISO datetime with timezone."},
+        "start": {"type": "string", "description": "Optional replacement ISO datetime with timezone. Prefer local offset such as +08:00; Z is accepted as UTC."},
+        "end": {"type": "string", "description": "Optional replacement ISO datetime with timezone. Prefer local offset such as +08:00; Z is accepted as UTC."},
         "location": {"type": "string", "description": "Optional replacement location."},
         "body": {"type": "string", "description": "Optional replacement body."},
         "body_format": {

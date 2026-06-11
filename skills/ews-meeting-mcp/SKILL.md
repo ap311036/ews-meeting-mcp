@@ -11,12 +11,13 @@ Use the `ews-meeting-mcp` MCP tools to schedule meetings through an on-prem Exch
 
 1. At the start of a scheduling session, call `ews_setup_check`. If it returns `ready: false`, show its `user_message` as-is, or show `setup_command` verbatim in a fenced `bash` block, and stop. Do not summarize it as "set EWS_PASSWORD or Keychain"; do not ask for attendee emails or continue with EWS tools until the user says they fixed setup. Then call `ews_setup_check` again before continuing.
 2. Parse the user's request into attendees, candidate rooms, date range, duration, subject, body, and location.
+   For Taiwan/local office scheduling, pass datetime arguments with an explicit local offset such as `+08:00`. `Z` is accepted by the tool but means UTC, not local time.
 3. If any attendee is not a complete email address, call `ews_resolve_attendees` first.
-4. Use exactly resolved emails for scheduling. If a name has zero matches or multiple matches, show the candidates and ask the user to choose before continuing.
-5. If the user did not mention rooms, call `ews_list_rooms` with the attendee count if known, then ask whether a meeting room is needed using the returned `options`. The default `source: "auto"` tries Exchange room-list discovery and falls back to configured policy rooms; offer the user a choice among the returned room `value`s or "no specific room"; do not rely on a hand-written room list.
+4. Use exactly resolved emails for scheduling. If a name has zero matches or multiple matches, ask the user to choose before continuing. Prefer the host's interactive multiple-choice UI or clickable choice controls when available; otherwise show a short numbered list of candidates.
+5. If the user did not mention rooms, call `ews_list_rooms` with the attendee count if known, then ask whether a meeting room is needed using the returned `options`. Prefer the host's interactive multiple-choice UI or clickable choice controls when available; include "no meeting room" and "auto-pick any room with enough capacity" choices. The default `source: "auto"` tries Exchange room-list discovery and falls back to configured policy rooms; offer the user a choice among the returned room `value`s or "no specific room"; do not rely on a hand-written room list.
 6. If the user wants a room but does not choose a specific room, call `ews_suggest_slots` with `require_room: true` and no `rooms`; the tool uses dynamic Exchange rooms when available, then falls back to configured rooms, and filters rooms with known `capacity` below the attendee count. `P` means persons.
 7. If the user chooses specific rooms, pass the selected room `value`s or emails in `rooms` when calling `ews_suggest_slots`.
-8. Show suggested slots with their `available_rooms`. Omit `workday_start`, `workday_end`, and `avoid` to use local policy defaults.
+8. Show suggested slots with their `available_rooms`. When asking the user to pick a slot or room, prefer the host's interactive multiple-choice UI or clickable choice controls when available; otherwise show a short numbered list. Omit `workday_start`, `workday_end`, and `avoid` to use local policy defaults.
 9. When the user picks a slot and room, call `ews_create_meeting_preview` with the selected room in `rooms`.
 10. Show the exact preview: attendees, rooms, start, end, subject, body, location, and `confirmation_id`.
 11. Only after the user explicitly confirms, call `ews_create_meeting_confirmed` with `confirm: true` and the exact `confirmation_id` returned by preview.
@@ -25,7 +26,7 @@ Use the `ews-meeting-mcp` MCP tools to schedule meetings through an on-prem Exch
 ## Existing Meeting Lifecycle
 
 1. For a request to change or cancel an existing meeting, call `ews_find_calendar_events` with the narrowest known `start`/`end` window and filters such as `subject_contains`, `location_contains`, `organizer_email`, or `attendee_email`.
-2. Use only the exact `id` and `changekey` returned by `ews_find_calendar_events`. If there is more than one plausible candidate, show the candidates and ask the user to choose one before previewing changes.
+2. Use only the exact `id` and `changekey` returned by `ews_find_calendar_events`. If there is more than one plausible candidate, ask the user to choose one before previewing changes. Prefer the host's interactive multiple-choice UI or clickable choice controls when available; otherwise show a short numbered list.
 3. For updates, call `ews_update_meeting_preview` with the exact `id`, `changekey`, and only supported fields: `subject`, `start`, `end`, `location`, and `body`. Do not attempt attendee or room replacement.
 4. For cancellations, call `ews_cancel_meeting_preview` with the exact `id` and `changekey`.
 5. Show the returned `current_event` plus `proposed_event`, or the `cancellation_target`, along with `warnings` and `confirmation_id`.

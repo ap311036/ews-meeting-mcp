@@ -7,6 +7,7 @@ from typing import Any, Callable
 from .audit import read_audit_log, record_lifecycle_audit
 from .confirmations import ConfirmationLedger, confirmation_id
 from .config import EwsConfig, keychain_status, setup_check
+from .datetime_utils import parse_iso_datetime
 from .errors import EwsToolError
 from .ews_client import EwsClient, default_window
 from .meeting import MeetingRequest, build_meeting_preview
@@ -71,8 +72,8 @@ def ews_find_calendar_events(
 ) -> list[dict[str, Any]]:
     client = client_factory()
     return client.find_calendar_events(
-        datetime.fromisoformat(start),
-        datetime.fromisoformat(end),
+        parse_iso_datetime(start),
+        parse_iso_datetime(end),
         subject_contains=subject_contains,
         location_contains=location_contains,
         organizer_email=organizer_email,
@@ -203,8 +204,8 @@ def ews_get_free_busy(
     attendee_emails = _attendee_emails(attendees, client)
     blocks = client.get_free_busy(
         attendee_emails,
-        datetime.fromisoformat(start),
-        datetime.fromisoformat(end),
+        parse_iso_datetime(start),
+        parse_iso_datetime(end),
     )
     return [_block_to_dict(block) for block in blocks]
 
@@ -231,8 +232,8 @@ def ews_suggest_slots(
             workday_end = policy.workday_end
         if avoid is None:
             avoid = policy.avoid
-    window_start = datetime.fromisoformat(start)
-    window_end = datetime.fromisoformat(end)
+    window_start = parse_iso_datetime(start)
+    window_end = parse_iso_datetime(end)
     client = client_factory()
     attendee_emails = _attendee_emails(attendees, client)
     busy = client.get_free_busy(attendee_emails, window_start, window_end)
@@ -683,8 +684,8 @@ def _meeting_request(
         subject=subject,
         attendees=attendees,
         rooms=rooms,
-        start=datetime.fromisoformat(start),
-        end=datetime.fromisoformat(end),
+        start=parse_iso_datetime(start),
+        end=parse_iso_datetime(end),
         body=body,
         body_format=body_format,
         location=location,
