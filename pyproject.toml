@@ -1,6 +1,6 @@
 [project]
 name = "ews-meeting-mcp"
-version = "0.1.19"
+version = "0.1.20"
 requires-python = ">=3.9"
 dependencies = [
   "setuptools>=61",

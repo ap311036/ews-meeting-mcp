@@ -472,6 +472,47 @@ class AgentToolTests(unittest.TestCase):
 
         self.assertEqual(first["confirmation_id"], second["confirmation_id"])
 
+    def test_create_preview_appends_configured_signature_by_default(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "signature.html")
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write('<div class="sig">Best Regards,<br>Snoop Yu</div>')
+
+            with patch.dict(os.environ, {"EWS_MEETING_SIGNATURE_HTML_PATH": path}, clear=False):
+                preview = agent_tools.ews_create_meeting_preview(
+                    subject="Sync",
+                    attendees=["ming.wang@example.com"],
+                    start="2026-06-15T10:00:00+08:00",
+                    end="2026-06-15T11:00:00+08:00",
+                    body="Meeting agenda",
+                )
+
+        self.assertIn("<p>Meeting agenda</p>", preview["body"])
+        self.assertIn("Best Regards", preview["body"])
+        self.assertIn("Snoop Yu", preview["body"])
+        self.assertEqual(preview["signature"]["configured"], True)
+        self.assertEqual(preview["signature"]["included"], True)
+
+    def test_create_preview_can_disable_signature_for_one_request(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "signature.html")
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write("<div>Signature</div>")
+
+            with patch.dict(os.environ, {"EWS_MEETING_SIGNATURE_HTML_PATH": path}, clear=False):
+                preview = agent_tools.ews_create_meeting_preview(
+                    subject="Sync",
+                    attendees=["ming.wang@example.com"],
+                    start="2026-06-15T10:00:00+08:00",
+                    end="2026-06-15T11:00:00+08:00",
+                    body="Meeting agenda",
+                    include_signature=False,
+                )
+
+        self.assertEqual(preview["body"], "<p>Meeting agenda</p>")
+        self.assertEqual(preview["signature"]["configured"], True)
+        self.assertEqual(preview["signature"]["included"], False)
+
     def test_create_preview_normalizes_email_whitespace_for_confirmation_id(self) -> None:
         client = FakeClient()
         preview = agent_tools.ews_create_meeting_preview(

@@ -39,6 +39,7 @@ This project wraps Exchange calendar operations in a small MCP surface with:
 | Capability | Tooling | Safety posture |
 | --- | --- | --- |
 | Check setup and credentials | `ews_setup_check`, `ews_keychain_status` | Never returns the EWS password |
+| Set up meeting signatures | `ews_signature_setup_guide` | Returns copyable HTML sample and local env guidance |
 | Read calendar availability | `ews_list_calendar`, `ews_get_free_busy`, `ews_find_calendar_events` | Read-only |
 | Resolve people and rooms | `ews_resolve_attendees`, `ews_list_rooms` | Uses Exchange directory when available |
 | Suggest slots | `ews_suggest_slots` | Applies local workday, avoid windows, and room capacity |
@@ -104,7 +105,7 @@ For an npm-installed MCP client:
   "mcpServers": {
     "ews-meeting-mcp": {
       "command": "npx",
-      "args": ["-y", "ews-meeting-mcp@0.1.19"],
+      "args": ["-y", "ews-meeting-mcp@0.1.20"],
       "env": {
         "EWS_ENDPOINT": "https://mail.company.com/EWS/Exchange.asmx",
         "EWS_EMAIL": "your_user@company.com",
@@ -135,6 +136,23 @@ For a local checkout:
 }
 ```
 
+### Optional: Add an Outlook-Style Signature
+
+Meeting invites append a configured HTML signature by default. Ask the MCP tool for a copyable starter template:
+
+```text
+ews_signature_setup_guide
+```
+
+Save the returned `sample_html` as `ews-meeting-signature.html` in the MCP working directory, then edit the name, email, title, logo URL, and disclaimer. You can also point to a different file:
+
+```bash
+EWS_MEETING_SIGNATURE_HTML_PATH=/path/to/ews-meeting-signature.html
+EWS_MEETING_SIGNATURE_ENABLED=true
+```
+
+Use an HTTPS logo URL recipients can access, or replace the `<img>` source with a base64 data URI. Set `EWS_MEETING_SIGNATURE_ENABLED=false` to temporarily stop appending the signature.
+
 ### 4. Verify Setup
 
 ```bash
@@ -151,6 +169,7 @@ Scheduling should follow this shape:
 ```text
 user request
 -> ews_setup_check
+-> ews_signature_setup_guide, if the user needs help creating the optional HTML signature
 -> ews_resolve_attendees, if names or aliases are provided
 -> ews_list_rooms, if a room may be needed
 -> ews_suggest_slots

@@ -1,6 +1,6 @@
 {
   "name": "ews-meeting-mcp",
-  "version": "0.1.19",
+  "version": "0.1.20",
   "mcpName": "io.github.ap311036/ews-meeting-mcp",
   "description": "MCP server and CLI for scheduling meetings through on-prem Exchange EWS.",
   "type": "module",

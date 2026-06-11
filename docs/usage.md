@@ -53,6 +53,33 @@ EWS_PASSWORD_KEYCHAIN_ACCOUNT='DOMAIN\your_user'
 
 If `EWS_PASSWORD_KEYCHAIN_ACCOUNT` is omitted, `EWS_USERNAME` is used. `EWS_PASSWORD` always takes precedence when it is set.
 
+## HTML Meeting Signature
+
+New meeting invites append a configured HTML signature by default. If no signature file exists, scheduling still works; previews include a `signature` status that reports `configured: false` and `next_action: "create_signature_file"`.
+
+Use the MCP helper tool to generate copyable setup guidance:
+
+```text
+ews_signature_setup_guide
+```
+
+The helper returns:
+
+- `recommended_path`: where to save the local HTML file, usually `ews-meeting-signature.html` in the MCP working directory.
+- `sample_html`: an Outlook-style starter signature with name, mail link, logo image, and disclaimer sections.
+- `setup_command`: a copyable shell command that writes the sample file and exports the related environment variables.
+
+To configure it manually:
+
+```bash
+EWS_MEETING_SIGNATURE_HTML_PATH=/path/to/ews-meeting-signature.html
+EWS_MEETING_SIGNATURE_ENABLED=true
+```
+
+If `EWS_MEETING_SIGNATURE_HTML_PATH` is omitted, the server looks for `ews-meeting-signature.html` in the current working directory. Set `EWS_MEETING_SIGNATURE_ENABLED=false` to temporarily stop appending the signature.
+
+For logos, use an HTTPS image URL that recipients can access, or replace the `<img>` `src` with a base64 data URI. Inline CID image attachments are not part of the first signature implementation.
+
 ## Scheduling Policy
 
 By default, MCP scheduling tools look for `ews-meeting-policy.json` in the current working directory. Set `EWS_MEETING_POLICY_FILE` to point at a different file.
@@ -277,7 +304,7 @@ MCP config for an npm-published package:
   "mcpServers": {
     "ews-meeting-mcp": {
       "command": "npx",
-      "args": ["-y", "ews-meeting-mcp@0.1.19"],
+      "args": ["-y", "ews-meeting-mcp@0.1.20"],
       "env": {
         "EWS_ENDPOINT": "https://mail.company.com/EWS/Exchange.asmx",
         "EWS_EMAIL": "your_user@company.com",

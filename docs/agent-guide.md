@@ -6,6 +6,7 @@ Use this guide when wiring EWS Meeting MCP into an assistant or coding agent.
 
 - `ews_setup_check()`
 - `ews_keychain_status()`
+- `ews_signature_setup_guide()`
 - `ews_get_audit_log(limit, action, status)`
 - `ews_probe()`
 - `ews_list_rooms(attendee_count, query, room_list, source, limit)`
@@ -31,6 +32,8 @@ At the start of a scheduling session, call `ews_setup_check`. If it returns `rea
 `ews_setup_check` reports machine-readable setup failures such as `error_code: "credentials_missing"` and `next_action: "show_setup_command"` or `next_action: "fix_mcp_env"`. It also reports malformed local policy JSON as `error_code: "policy_invalid_json"` with `required_action: "fix_policy_file"`.
 
 `ews_keychain_status` remains available when you only need to inspect whether the password is coming from `EWS_PASSWORD` or macOS Keychain without revealing it.
+
+If the user asks to set up or edit an Outlook-style meeting signature, call `ews_signature_setup_guide`. Show the returned `sample_html`, `recommended_path`, and `setup_command` so the user can copy the sample and edit their name, email, title, logo URL, and disclaimer. This tool does not require EWS credentials.
 
 The MCP server also preflights credential-required EWS tools. If an agent accidentally calls `ews_resolve_attendees`, `ews_get_free_busy`, `ews_suggest_slots`, or another live EWS tool before credentials are available, the server returns a structured setup payload instead of continuing. Preview calls that need directory resolution can also return the same structured setup payload from inside the tool.
 
@@ -69,6 +72,8 @@ User request
 
 For new meetings, call `ews_create_meeting_preview`, show the exact invite details and returned `confirmation_id`, then call `ews_create_meeting_confirmed` only after explicit user approval with `confirm: true` and the same `confirmation_id`.
 
+Configured HTML signatures are appended to new meeting bodies by default. Show the preview `body` and `signature` status to the user before confirmation. Pass `include_signature: false` only when the user explicitly asks to omit the signature for that meeting.
+
 Confirmed create, update, and cancel operations are recorded in a small local confirmation ledger under `EWS_MEETING_MCP_STATE_DIR` when set, or the user's local state/cache directory otherwise. The older `EWS_MEETING_AGENT_STATE_DIR` name is still accepted for compatibility. The ledger stores operation metadata only, not passwords.
 
 If a confirmed tool returns `error_code: "duplicate_confirmation"`, treat the prior operation as already handled, inspect `prior_result`, and do not retry blindly.
@@ -78,6 +83,8 @@ If a confirmed tool returns `error_code: "duplicate_confirmation"`, treat the pr
 Meeting bodies default to `body_format: "html"`. If the body is plain text, the tool safely converts it to simple HTML, preserves line breaks, escapes raw markup, and turns `http://` or `https://` URLs such as PRD or Wiki links into clickable anchors.
 
 Agents may pass intentional HTML directly, or set `body_format: "text"` when a plain text body is explicitly required.
+
+When `body_format: "html"` and a signature file is configured, `ews_create_meeting_preview` appends the signature before computing `confirmation_id`; the confirmed create must use the same signature setting and file contents. When `body_format: "text"`, the HTML signature is not appended because it would change the requested plain text format.
 
 ## Audit Log
 

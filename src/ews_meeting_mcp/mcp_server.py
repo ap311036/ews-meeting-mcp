@@ -12,11 +12,12 @@ from .confirmations import ConfirmationLedger
 from .errors import EwsToolError
 
 
-SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.19"}
+SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.20"}
 
 TOOL_HANDLERS: dict[str, Callable[..., Any]] = {
     "ews_keychain_status": agent_tools.ews_keychain_status,
     "ews_setup_check": agent_tools.ews_setup_check,
+    "ews_signature_setup_guide": agent_tools.ews_signature_setup_guide,
     "ews_get_audit_log": agent_tools.ews_get_audit_log,
     "ews_probe": agent_tools.ews_probe,
     "ews_list_calendar": agent_tools.ews_list_calendar,
@@ -92,6 +93,8 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
                     "Before any EWS scheduling, call ews_setup_check. If ready=false, show "
                     "user_message as-is, or show setup_command verbatim in a fenced shell block, and stop; "
                     "do not ask for attendee emails or continue scheduling until setup is ready. "
+                    "If the user asks to set up an Outlook-style meeting signature, call "
+                    "ews_signature_setup_guide and show its sample_html, recommended_path, and setup_command. "
                     "Resolve non-email attendee names with ews_resolve_attendees before scheduling; "
                     "do not ask the user for full attendee email addresses until directory resolution has "
                     "failed or returned ambiguous candidates. "
@@ -100,7 +103,7 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
                     "available; otherwise show a short numbered list and wait for the user's selection. "
                     "Use ews_suggest_slots with resolved email addresses and candidate rooms when a room "
                     "is needed. Before sending invitations, show the preview from "
-                    "ews_create_meeting_preview and ask the user to confirm, then pass the same "
+                    "ews_create_meeting_preview, including body and signature status, and ask the user to confirm, then pass the same "
                     "confirmation_id to ews_create_meeting_confirmed. For existing meetings, "
                     "use ews_find_calendar_events, preview update/cancel actions, then call the matching "
                     "confirmed tool only with confirm=true and the returned confirmation_id. After confirmed "
@@ -169,6 +172,14 @@ def _meeting_schema(*, include_confirm: bool) -> dict[str, Any]:
             "enum": ["html", "text"],
             "default": "html",
             "description": "Meeting body format. Defaults to html; plain text input is safely converted to HTML.",
+        },
+        "include_signature": {
+            "type": "boolean",
+            "default": True,
+            "description": (
+                "When true, append the configured HTML meeting signature by default. "
+                "Use ews_signature_setup_guide to help the user create the signature file."
+            ),
         },
         "location": {"type": "string", "default": ""},
     }
@@ -396,6 +407,14 @@ def _tool_defs() -> list[dict[str, Any]]:
             "description": (
                 "Return whether EWS setup is ready, including env and password/Keychain checks. "
                 "When ready is false, show user_message or setup_command and stop before scheduling."
+            ),
+            "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+        },
+        {
+            "name": "ews_signature_setup_guide",
+            "description": (
+                "Return an HTML signature setup guide with a copyable sample, recommended local file path, "
+                "and environment variables. Does not require EWS credentials."
             ),
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
         },

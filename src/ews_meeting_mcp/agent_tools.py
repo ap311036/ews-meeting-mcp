@@ -10,9 +10,10 @@ from .config import EwsConfig, keychain_status, setup_check
 from .datetime_utils import parse_iso_datetime
 from .errors import EwsToolError
 from .ews_client import EwsClient, default_window
-from .meeting import MeetingRequest, build_meeting_preview
+from .meeting import MeetingRequest, build_meeting_preview, render_body_for_format
 from .policy import load_policy
 from .scheduler import TimeBlock, overlaps, parse_time_range, suggest_slots
+from .signature import apply_signature, signature_setup_guide
 
 
 ClientFactory = Callable[[], EwsClient]
@@ -34,6 +35,10 @@ def ews_setup_check() -> dict[str, Any]:
         payload.setdefault("next_action", payload.get("required_action", "fix_policy_file"))
         return payload
     return setup_check()
+
+
+def ews_signature_setup_guide() -> dict[str, Any]:
+    return signature_setup_guide()
 
 
 def ews_get_audit_log(
@@ -286,6 +291,7 @@ def ews_create_meeting_preview(
     end: str,
     body: str = "",
     body_format: str = "html",
+    include_signature: bool = True,
     location: str = "",
     client_factory: ClientFactory = default_client_factory,
 ) -> dict[str, Any]:
@@ -297,6 +303,7 @@ def ews_create_meeting_preview(
         "end": end,
         "body": body,
         "body_format": body_format,
+        "include_signature": include_signature,
         "location": location,
     }
     try:
@@ -312,8 +319,19 @@ def ews_create_meeting_preview(
         room_emails = [room["email"] for room in room_infos]
         if not location and room_infos:
             location = room_infos[0]["name"]
-        request = _meeting_request(subject, attendees, room_emails, start, end, body, body_format, location)
+        request, signature = _meeting_request(
+            subject,
+            attendees,
+            room_emails,
+            start,
+            end,
+            body,
+            body_format,
+            location,
+            include_signature=include_signature,
+        )
         preview = build_meeting_preview(request, confirmed=False)
+        preview["signature"] = signature
         preview["confirmation_id"] = _confirmation_id("create_meeting", preview)
         warning = _record_lifecycle_audit(action="create_meeting", status="preview", arguments=arguments, result=preview)
         if warning:
@@ -338,6 +356,7 @@ def ews_create_meeting_confirmed(
     end: str,
     body: str = "",
     body_format: str = "html",
+    include_signature: bool = True,
     location: str = "",
     confirmation_id: str = "",
     confirm: bool = False,
@@ -351,6 +370,7 @@ def ews_create_meeting_confirmed(
         "end": end,
         "body": body,
         "body_format": body_format,
+        "include_signature": include_signature,
         "location": location,
         "confirmation_id": confirmation_id,
         "confirm": confirm,
@@ -369,8 +389,19 @@ def ews_create_meeting_confirmed(
             room_emails = [room["email"] for room in room_infos]
             if not location and room_infos:
                 location = room_infos[0]["name"]
-            request = _meeting_request(subject, attendee_emails, room_emails, start, end, body, body_format, location)
+            request, signature = _meeting_request(
+                subject,
+                attendee_emails,
+                room_emails,
+                start,
+                end,
+                body,
+                body_format,
+                location,
+                include_signature=include_signature,
+            )
             preview = build_meeting_preview(request, confirmed=False)
+            preview["signature"] = signature
             preview["confirmation_id"] = _confirmation_id("create_meeting", preview)
             _require_confirmation_id(confirmation_id, str(preview["confirmation_id"]))
         except Exception:
@@ -679,17 +710,26 @@ def _meeting_request(
     body: str,
     body_format: str,
     location: str,
-) -> MeetingRequest:
-    return MeetingRequest(
+    *,
+    include_signature: bool = True,
+) -> tuple[MeetingRequest, dict[str, Any]]:
+    rendered_body = render_body_for_format(body, body_format)
+    rendered_body, signature = apply_signature(
+        rendered_body,
+        body_format,
+        include_signature=include_signature,
+    )
+    request = MeetingRequest(
         subject=subject,
         attendees=attendees,
         rooms=rooms,
         start=parse_iso_datetime(start),
         end=parse_iso_datetime(end),
-        body=body,
+        body=rendered_body,
         body_format=body_format,
         location=location,
     )
+    return request, signature
 
 
 def _meeting_updates(

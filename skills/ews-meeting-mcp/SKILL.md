@@ -10,6 +10,7 @@ Use the `ews-meeting-mcp` MCP tools to schedule meetings through an on-prem Exch
 ## Workflow
 
 1. At the start of a scheduling session, call `ews_setup_check`. If it returns `ready: false`, show its `user_message` as-is, or show `setup_command` verbatim in a fenced `bash` block, and stop. Do not summarize it as "set EWS_PASSWORD or Keychain"; do not ask for attendee emails or continue with EWS tools until the user says they fixed setup. Then call `ews_setup_check` again before continuing.
+   If the user asks how to set up an Outlook-style meeting signature, call `ews_signature_setup_guide` and show the returned `sample_html`, `recommended_path`, and `setup_command`; this helper does not require EWS credentials.
 2. Parse the user's request into attendees, candidate rooms, date range, duration, subject, body, and location.
    For Taiwan/local office scheduling, pass datetime arguments with an explicit local offset such as `+08:00`. `Z` is accepted by the tool but means UTC, not local time.
 3. If any attendee is not a complete email address, call `ews_resolve_attendees` first. Do not ask the user to provide full attendee email addresses before trying company directory resolution.
@@ -19,7 +20,7 @@ Use the `ews-meeting-mcp` MCP tools to schedule meetings through an on-prem Exch
 7. If the user chooses specific rooms, pass the selected room `value`s or emails in `rooms` when calling `ews_suggest_slots`.
 8. Show suggested slots with their `available_rooms`. When asking the user to pick a slot or room, prefer the host's interactive multiple-choice UI or clickable choice controls when available; otherwise show a short numbered list. Omit `workday_start`, `workday_end`, and `avoid` to use local policy defaults.
 9. When the user picks a slot and room, call `ews_create_meeting_preview` with the selected room in `rooms`.
-10. Show the exact preview: attendees, rooms, start, end, subject, body, location, and `confirmation_id`.
+10. Show the exact preview: attendees, rooms, start, end, subject, body, location, `signature` status, and `confirmation_id`.
 11. Only after the user explicitly confirms, call `ews_create_meeting_confirmed` with `confirm: true` and the exact `confirmation_id` returned by preview.
 12. After a successful confirmed create, call `ews_verify_meeting` with the returned item `id` and `changekey` when available, then report the organizer item status and room `response_status`. Treat `unknown` room response as pending/unknown, not as failure.
 
@@ -56,6 +57,8 @@ Use the `ews-meeting-mcp` MCP tools to schedule meetings through an on-prem Exch
 - Use `require_room: true` when the user wants a room but does not specify which room.
 - To schedule with a room, pass the selected room in `rooms` to both preview and confirmed meeting tools. The room is sent as an Exchange resource, not as a required attendee.
 - Meeting body defaults to `body_format: "html"`. You may turn a user-provided agenda into concise HTML, including clickable PRD/Wiki links. Plain text bodies are also accepted and are safely converted to HTML with line breaks and URL anchors.
+- New meeting bodies append the configured HTML signature by default when `body_format: "html"`. Use `include_signature: false` only when the user explicitly asks to omit the signature for that meeting. If no signature file is configured, scheduling still works and the preview includes `signature.configured: false`.
+- Use `ews_signature_setup_guide` whenever the user needs help creating or editing the signature file. The tool returns a copyable HTML starter with name, email link, logo image, and disclaimer sections.
 - Use `ews_get_free_busy` for diagnostics when slot suggestions look surprising.
 - Use `ews_list_calendar` to verify whether an event exists on the server calendar.
 - Use `ews_find_calendar_events` before update or cancel because it returns stable item metadata (`id`, `changekey`, `uid`, attendees, resources, organizer, meeting/cancelled/recurrence flags) needed for safe lifecycle tools.

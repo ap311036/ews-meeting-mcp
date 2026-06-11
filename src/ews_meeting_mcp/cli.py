@@ -8,8 +8,9 @@ import warnings
 from .config import EwsConfig
 from .datetime_utils import parse_iso_datetime
 from .ews_client import EwsClient, default_window
-from .meeting import MeetingRequest, build_meeting_preview
+from .meeting import MeetingRequest, build_meeting_preview, render_body_for_format
 from .scheduler import parse_time_range, suggest_slots
+from .signature import apply_signature
 
 
 def main() -> None:
@@ -47,6 +48,11 @@ def main() -> None:
     create.add_argument("--subject", required=True)
     create.add_argument("--body", default="")
     create.add_argument("--location", default="")
+    create.add_argument(
+        "--no-signature",
+        action="store_true",
+        help="Do not append the configured HTML meeting signature for this invite.",
+    )
     create.add_argument(
         "--confirm",
         action="store_true",
@@ -94,15 +100,21 @@ def main() -> None:
 
     if args.command == "create-meeting":
         start, end = _parse_window(args)
+        body, signature = apply_signature(
+            render_body_for_format(args.body, "html"),
+            "html",
+            include_signature=not args.no_signature,
+        )
         request = MeetingRequest(
             subject=args.subject,
             attendees=args.attendee,
             start=start,
             end=end,
-            body=args.body,
+            body=body,
             location=args.location,
         )
         preview = build_meeting_preview(request, confirmed=args.confirm)
+        preview["signature"] = signature
         if not args.confirm:
             _print(preview)
             return

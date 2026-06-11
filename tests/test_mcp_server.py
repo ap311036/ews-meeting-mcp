@@ -32,6 +32,7 @@ class McpServerTests(unittest.TestCase):
         self.assertIn("ews_keychain_status", tool_names)
         self.assertIn("ews_setup_check", tool_names)
         self.assertIn("ews_get_audit_log", tool_names)
+        self.assertIn("ews_signature_setup_guide", tool_names)
         self.assertIn("ews_list_rooms", tool_names)
         self.assertIn("ews_resolve_attendees", tool_names)
         self.assertIn("ews_verify_meeting", tool_names)
@@ -61,6 +62,27 @@ class McpServerTests(unittest.TestCase):
 
         self.assertIn("ready", tool["description"])
         self.assertEqual(tool["inputSchema"], {"type": "object", "properties": {}, "additionalProperties": False})
+
+    def test_signature_setup_guide_tool_has_empty_schema_and_returns_sample(self) -> None:
+        tools_response = handle_request({"jsonrpc": "2.0", "id": 33, "method": "tools/list"})
+        tool = next(item for item in tools_response["result"]["tools"] if item["name"] == "ews_signature_setup_guide")
+
+        response = handle_request(
+            {
+                "jsonrpc": "2.0",
+                "id": 34,
+                "method": "tools/call",
+                "params": {"name": "ews_signature_setup_guide", "arguments": {}},
+            }
+        )
+
+        payload = _tool_payload(response)
+        self.assertIn("HTML signature", tool["description"])
+        self.assertEqual(tool["inputSchema"], {"type": "object", "properties": {}, "additionalProperties": False})
+        self.assertFalse(response["result"]["isError"])
+        self.assertIn("sample_html", payload)
+        self.assertIn("EWS_MEETING_SIGNATURE_HTML_PATH", payload["env"])
+        self.assertIn("Best Regards", payload["sample_html"])
 
     def test_get_audit_log_tool_schema_and_call(self) -> None:
         with tempfile.TemporaryDirectory() as state_dir:
@@ -545,11 +567,13 @@ class McpServerTests(unittest.TestCase):
         tools = {tool["name"]: tool for tool in response["result"]["tools"]}
         create_body_format = tools["ews_create_meeting_preview"]["inputSchema"]["properties"]["body_format"]
         update_body_format = tools["ews_update_meeting_preview"]["inputSchema"]["properties"]["body_format"]
+        include_signature = tools["ews_create_meeting_preview"]["inputSchema"]["properties"]["include_signature"]
 
         self.assertEqual(create_body_format["default"], "html")
         self.assertEqual(create_body_format["enum"], ["html", "text"])
         self.assertEqual(update_body_format["default"], "html")
         self.assertEqual(update_body_format["enum"], ["html", "text"])
+        self.assertEqual(include_signature["default"], True)
 
     def test_update_confirmed_false_returns_structured_confirmation_error(self) -> None:
         response = handle_request(
