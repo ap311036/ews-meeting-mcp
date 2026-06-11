@@ -409,7 +409,7 @@ class AgentToolTests(unittest.TestCase):
     def test_suggest_slots_reports_ambiguous_names_before_free_busy_lookup(self) -> None:
         client = FakeClient()
 
-        with self.assertRaisesRegex(ValueError, "Alex.*alex.chen@example.com.*alex.lin@example.com"):
+        with self.assertRaises(EwsToolError) as raised:
             agent_tools.ews_suggest_slots(
                 attendees=["Alex"],
                 start="2026-06-15T10:00:00+08:00",
@@ -417,6 +417,12 @@ class AgentToolTests(unittest.TestCase):
                 client_factory=lambda: client,
             )
 
+        self.assertEqual(raised.exception.error_code, "ambiguous_attendee")
+        self.assertEqual(raised.exception.payload["required_action"], "choose_attendee_candidate")
+        self.assertIn("不要要求使用者手動輸入完整 email", raised.exception.payload["user_message"])
+        matches = raised.exception.payload["matches"]
+        self.assertEqual(matches[0]["email"], "alex.chen@example.com")
+        self.assertEqual(matches[1]["email"], "alex.lin@example.com")
         self.assertEqual(client.free_busy_calls, [])
 
     def test_create_meeting_confirmed_resolves_names_before_creating(self) -> None:

@@ -12,7 +12,7 @@ from .confirmations import ConfirmationLedger
 from .errors import EwsToolError
 
 
-SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.18"}
+SERVER_INFO = {"name": "ews-meeting-mcp", "version": "0.1.19"}
 
 TOOL_HANDLERS: dict[str, Callable[..., Any]] = {
     "ews_keychain_status": agent_tools.ews_keychain_status,
@@ -92,7 +92,9 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
                     "Before any EWS scheduling, call ews_setup_check. If ready=false, show "
                     "user_message as-is, or show setup_command verbatim in a fenced shell block, and stop; "
                     "do not ask for attendee emails or continue scheduling until setup is ready. "
-                    "Resolve non-email attendee names with ews_resolve_attendees before scheduling. "
+                    "Resolve non-email attendee names with ews_resolve_attendees before scheduling; "
+                    "do not ask the user for full attendee email addresses until directory resolution has "
+                    "failed or returned ambiguous candidates. "
                     "When attendee, room, slot, or existing-event candidates require a user choice, "
                     "prefer the host's interactive multiple-choice UI or clickable choice controls when "
                     "available; otherwise show a short numbered list and wait for the user's selection. "
@@ -193,7 +195,15 @@ def _free_busy_schema() -> dict[str, Any]:
     return {
         "type": "object",
         "properties": {
-            "attendees": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+            "attendees": {
+                "type": "array",
+                "items": {"type": "string"},
+                "minItems": 1,
+                "description": (
+                    "Attendee display names, aliases, or email addresses. Resolve names first; "
+                    "do not ask the user for full email addresses before trying directory resolution."
+                ),
+            },
             "start": {"type": "string", "description": "ISO datetime with timezone. Prefer local offset such as +08:00; Z is accepted as UTC."},
             "end": {"type": "string", "description": "ISO datetime with timezone. Prefer local offset such as +08:00; Z is accepted as UTC."},
         },

@@ -13,6 +13,7 @@ class SkillContractTests(unittest.TestCase):
 
         self.assertIn("ews_resolve_attendees", text)
         self.assertIn("not a complete email address", text)
+        self.assertIn("Never ask for full attendee emails as the first step", text)
         self.assertIn("ask the user to choose", text)
         self.assertIn("interactive multiple-choice UI", text)
         self.assertIn("clickable choice controls", text)

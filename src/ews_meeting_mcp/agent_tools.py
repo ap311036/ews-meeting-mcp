@@ -881,12 +881,30 @@ def _attendee_emails(attendees: list[str], client: EwsClient) -> list[str]:
                 continue
 
         if status == "ambiguous":
-            raise ValueError(
-                f"Attendee '{query}' is ambiguous. Ask the user to choose one email: "
-                f"{_format_matches(matches)}"
+            raise EwsToolError(
+                "ambiguous_attendee",
+                f"Attendee '{query}' is ambiguous.",
+                query=query,
+                matches=_safe_matches(matches),
+                required_action="choose_attendee_candidate",
+                next_action="ask_user_to_choose_attendee_candidate",
+                user_message=(
+                    f"找到多個符合 '{query}' 的人員。請讓使用者從候選人中選擇一位，"
+                    "不要要求使用者手動輸入完整 email。"
+                ),
             )
 
-        raise ValueError(f"Could not resolve attendee '{query}' to an email address.")
+        raise EwsToolError(
+            "attendee_not_found",
+            f"Could not resolve attendee '{query}' to an email address.",
+            query=query,
+            matches=_safe_matches(matches),
+            required_action="clarify_attendee",
+            next_action="ask_user_for_more_specific_attendee_name_or_email",
+            user_message=(
+                f"找不到符合 '{query}' 的公司通訊錄人員。請使用者提供更完整的姓名、別名或 email。"
+            ),
+        )
 
     return emails
 
@@ -1078,3 +1096,17 @@ def _format_matches(matches: list[object]) -> str:
         elif email:
             labels.append(email)
     return ", ".join(labels) if labels else "no candidates returned"
+
+
+def _safe_matches(matches: list[object]) -> list[dict[str, str]]:
+    safe: list[dict[str, str]] = []
+    for match in matches:
+        if not isinstance(match, dict):
+            continue
+        safe.append(
+            {
+                "name": str(match.get("name", "")),
+                "email": str(match.get("email", "")),
+            }
+        )
+    return safe

@@ -277,7 +277,7 @@ MCP config for an npm-published package:
   "mcpServers": {
     "ews-meeting-mcp": {
       "command": "npx",
-      "args": ["-y", "ews-meeting-mcp@0.1.18"],
+      "args": ["-y", "ews-meeting-mcp@0.1.19"],
       "env": {
         "EWS_ENDPOINT": "https://mail.company.com/EWS/Exchange.asmx",
         "EWS_EMAIL": "your_user@company.com",

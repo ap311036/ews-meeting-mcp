@@ -310,6 +310,9 @@ class McpServerTests(unittest.TestCase):
 
         self.assertIn("rooms", tool["inputSchema"]["properties"])
         self.assertIn("require_room", tool["inputSchema"]["properties"])
+        attendee_description = tool["inputSchema"]["properties"]["attendees"]["description"]
+        self.assertIn("display names", attendee_description)
+        self.assertIn("do not ask the user for full email", attendee_description)
 
     def test_list_rooms_tool_schema_accepts_attendee_count(self) -> None:
         response = handle_request({"jsonrpc": "2.0", "id": 14, "method": "tools/list"})

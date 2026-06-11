@@ -3,7 +3,7 @@
   "name": "io.github.ap311036/ews-meeting-mcp",
   "title": "EWS Meeting MCP",
   "description": "Safely schedule Outlook meetings on on-prem Exchange EWS with preview-confirmed writes.",
-  "version": "0.1.18",
+  "version": "0.1.19",
   "websiteUrl": "https://github.com/ap311036/ews-meeting-mcp",
   "repository": {
     "url": "https://github.com/ap311036/ews-meeting-mcp",
@@ -14,7 +14,7 @@
     {
       "registryType": "npm",
       "identifier": "ews-meeting-mcp",
-      "version": "0.1.18",
+      "version": "0.1.19",
       "transport": {
         "type": "stdio"
       },

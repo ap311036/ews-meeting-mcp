@@ -12,8 +12,8 @@ Use the `ews-meeting-mcp` MCP tools to schedule meetings through an on-prem Exch
 1. At the start of a scheduling session, call `ews_setup_check`. If it returns `ready: false`, show its `user_message` as-is, or show `setup_command` verbatim in a fenced `bash` block, and stop. Do not summarize it as "set EWS_PASSWORD or Keychain"; do not ask for attendee emails or continue with EWS tools until the user says they fixed setup. Then call `ews_setup_check` again before continuing.
 2. Parse the user's request into attendees, candidate rooms, date range, duration, subject, body, and location.
    For Taiwan/local office scheduling, pass datetime arguments with an explicit local offset such as `+08:00`. `Z` is accepted by the tool but means UTC, not local time.
-3. If any attendee is not a complete email address, call `ews_resolve_attendees` first.
-4. Use exactly resolved emails for scheduling. If a name has zero matches or multiple matches, ask the user to choose before continuing. Prefer the host's interactive multiple-choice UI or clickable choice controls when available; otherwise show a short numbered list of candidates.
+3. If any attendee is not a complete email address, call `ews_resolve_attendees` first. Do not ask the user to provide full attendee email addresses before trying company directory resolution.
+4. Use exactly resolved emails for scheduling. If a name has zero matches or multiple matches, ask the user to clarify or choose from the returned candidates before continuing. Prefer the host's interactive multiple-choice UI or clickable choice controls when available; otherwise show a short numbered list of candidates. For ambiguous matches, show candidate names and emails as choices; do not ask the user to type the full email manually.
 5. If the user did not mention rooms, call `ews_list_rooms` with the attendee count if known, then ask whether a meeting room is needed using the returned `options`. Prefer the host's interactive multiple-choice UI or clickable choice controls when available; include "no meeting room" and "auto-pick any room with enough capacity" choices. The default `source: "auto"` tries Exchange room-list discovery and falls back to configured policy rooms; offer the user a choice among the returned room `value`s or "no specific room"; do not rely on a hand-written room list.
 6. If the user wants a room but does not choose a specific room, call `ews_suggest_slots` with `require_room: true` and no `rooms`; the tool uses dynamic Exchange rooms when available, then falls back to configured rooms, and filters rooms with known `capacity` below the attendee count. `P` means persons.
 7. If the user chooses specific rooms, pass the selected room `value`s or emails in `rooms` when calling `ews_suggest_slots`.
@@ -45,7 +45,7 @@ Use the `ews-meeting-mcp` MCP tools to schedule meetings through an on-prem Exch
 
 ## Tool Notes
 
-- Use `ews_resolve_attendees` whenever the user gives names, aliases, or mixed name/email attendee lists.
+- Use `ews_resolve_attendees` whenever the user gives names, aliases, or mixed name/email attendee lists. Never ask for full attendee emails as the first step; try directory resolution first.
 - Use `ews_setup_check` before the first EWS operation in a session. It never returns the password. If `ready` is false, follow `next_action` or `required_action`, show the setup instructions, and stop.
 - Use `ews_keychain_status` only when you specifically need the password source diagnostic.
 - Use `ews_get_audit_log` when you need to inspect recent preview, confirmed, duplicate, in-progress, or structured error outcomes. It reads a local JSONL audit log and never returns EWS passwords.
