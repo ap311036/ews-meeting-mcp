@@ -476,7 +476,7 @@ class AgentToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             path = os.path.join(tmpdir, "signature.html")
             with open(path, "w", encoding="utf-8") as handle:
-                handle.write('<div class="sig">Best Regards,<br>Snoop Yu</div>')
+                handle.write('<div class="sig">Best Regards,<br>Your Name</div>')
 
             with patch.dict(os.environ, {"EWS_MEETING_SIGNATURE_HTML_PATH": path}, clear=False):
                 preview = agent_tools.ews_create_meeting_preview(
@@ -489,7 +489,7 @@ class AgentToolTests(unittest.TestCase):
 
         self.assertIn("<p>Meeting agenda</p>", preview["body"])
         self.assertIn("Best Regards", preview["body"])
-        self.assertIn("Snoop Yu", preview["body"])
+        self.assertIn("Your Name", preview["body"])
         self.assertEqual(preview["signature"]["configured"], True)
         self.assertEqual(preview["signature"]["included"], True)
 
@@ -1037,7 +1037,7 @@ class AgentToolTests(unittest.TestCase):
                     "\n".join(
                         [
                             "EWS_ENDPOINT=https://example.test/EWS/Exchange.asmx",
-                            "EWS_EMAIL=snoop.yu@example.test",
+                            "EWS_EMAIL=ews.user@example.test",
                             "EWS_USERNAME=bk00325",
                             "EWS_PASSWORD=secret-from-dotenv",
                             f"EWS_MEETING_POLICY_FILE={policy_path}",

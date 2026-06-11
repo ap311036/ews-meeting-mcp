@@ -19,10 +19,10 @@ class ConfigTests(unittest.TestCase):
                     os.environ,
                     {
                         "EWS_ENDPOINT": "https://example.test/EWS/Exchange.asmx",
-                        "EWS_EMAIL": "snoop.yu@example.test",
-                        "EWS_USERNAME": "EXAMPLE\\snoop.yu",
+                        "EWS_EMAIL": "ews.user@example.test",
+                        "EWS_USERNAME": "EXAMPLE\\ews.user",
                         "EWS_PASSWORD_KEYCHAIN_SERVICE": "ews-meeting-mcp",
-                        "EWS_PASSWORD_KEYCHAIN_ACCOUNT": "EXAMPLE\\snoop.yu",
+                        "EWS_PASSWORD_KEYCHAIN_ACCOUNT": "EXAMPLE\\ews.user",
                     },
                     clear=True,
                 ):
@@ -44,7 +44,7 @@ class ConfigTests(unittest.TestCase):
                         "-s",
                         "ews-meeting-mcp",
                         "-a",
-                        "EXAMPLE\\snoop.yu",
+                        "EXAMPLE\\ews.user",
                         "-w",
                     ],
                     check=True,
@@ -63,8 +63,8 @@ class ConfigTests(unittest.TestCase):
                     os.environ,
                     {
                         "EWS_ENDPOINT": "https://example.test/EWS/Exchange.asmx",
-                        "EWS_EMAIL": "snoop.yu@example.test",
-                        "EWS_USERNAME": "EXAMPLE\\snoop.yu",
+                        "EWS_EMAIL": "ews.user@example.test",
+                        "EWS_USERNAME": "EXAMPLE\\ews.user",
                         "EWS_PASSWORD": "secret-from-env",
                         "EWS_PASSWORD_KEYCHAIN_SERVICE": "ews-meeting-mcp",
                     },
@@ -150,7 +150,7 @@ class ConfigTests(unittest.TestCase):
                     os.environ,
                     {
                         "EWS_ENDPOINT": "https://example.test/EWS/Exchange.asmx",
-                        "EWS_EMAIL": "snoop.yu@example.test",
+                        "EWS_EMAIL": "ews.user@example.test",
                         "EWS_USERNAME": "bk00325",
                         "EWS_PASSWORD_KEYCHAIN_SERVICE": "ews-meeting-mcp",
                     },

@@ -117,7 +117,7 @@ class McpServerTests(unittest.TestCase):
             os.environ,
             {
                 "EWS_ENDPOINT": "https://example.test/EWS/Exchange.asmx",
-                "EWS_EMAIL": "snoop.yu@example.test",
+                "EWS_EMAIL": "ews.user@example.test",
                 "EWS_USERNAME": "bk00325",
                 "EWS_PASSWORD_KEYCHAIN_SERVICE": "ews-meeting-mcp",
             },
@@ -168,7 +168,7 @@ class McpServerTests(unittest.TestCase):
             os.environ,
             {
                 "EWS_ENDPOINT": "https://example.test/EWS/Exchange.asmx",
-                "EWS_EMAIL": "snoop.yu@example.test",
+                "EWS_EMAIL": "ews.user@example.test",
                 "EWS_USERNAME": "bk00325",
                 "EWS_PASSWORD": "secret-from-env",
             },

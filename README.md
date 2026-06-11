@@ -105,7 +105,7 @@ For an npm-installed MCP client:
   "mcpServers": {
     "ews-meeting-mcp": {
       "command": "npx",
-      "args": ["-y", "ews-meeting-mcp@0.1.20"],
+      "args": ["-y", "ews-meeting-mcp@0.1.21"],
       "env": {
         "EWS_ENDPOINT": "https://mail.company.com/EWS/Exchange.asmx",
         "EWS_EMAIL": "your_user@company.com",

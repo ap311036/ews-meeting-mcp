@@ -17,7 +17,7 @@ class SignatureTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             path = os.path.join(tmpdir, "signature.html")
             with open(path, "w", encoding="utf-8") as handle:
-                handle.write('<div class="sig">Best Regards,<br>Snoop Yu</div>')
+                handle.write('<div class="sig">Best Regards,<br>Your Name</div>')
 
             with patch.dict(os.environ, {"EWS_MEETING_SIGNATURE_HTML_PATH": path}, clear=True):
                 rendered = append_signature("<p>Meeting agenda</p>", "html")
@@ -25,7 +25,7 @@ class SignatureTests(unittest.TestCase):
         self.assertIn("<p>Meeting agenda</p>", rendered)
         self.assertIn('<div class="ews-meeting-signature-separator"></div>', rendered)
         self.assertIn("Best Regards", rendered)
-        self.assertIn("Snoop Yu", rendered)
+        self.assertIn("Your Name", rendered)
 
     def test_append_signature_keeps_text_body_plain_text(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -61,7 +61,9 @@ class SignatureTests(unittest.TestCase):
         self.assertIn("ews-meeting-signature.html", guide["recommended_path"])
         self.assertIn("Best Regards", guide["sample_html"])
         self.assertIn("mailto:", guide["sample_html"])
-        self.assertIn("LINE Bank", guide["sample_html"])
+        self.assertIn("Your Name", guide["sample_html"])
+        self.assertIn("Example Company", guide["sample_html"])
+        self.assertIn("your.name@example.com", guide["sample_html"])
 
 
 if __name__ == "__main__":

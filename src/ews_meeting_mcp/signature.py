@@ -14,20 +14,19 @@ SIGNATURE_ENABLED_ENV = "EWS_MEETING_SIGNATURE_ENABLED"
 
 SAMPLE_SIGNATURE_HTML = """<div style="font-family: Arial, Helvetica, sans-serif; color: #777; font-size: 14px; line-height: 1.35;">
   <p style="margin: 0 0 18px 0; color: #111; font-weight: 700;">Best Regards,</p>
-  <p style="margin: 0 0 18px 0; color: #111; font-weight: 700;">游敦翔 Snoop Yu</p>
+  <p style="margin: 0 0 18px 0; color: #111; font-weight: 700;">Your Name</p>
   <p style="margin: 0 0 14px 0;">
-    <strong>LINE Bank Taiwan Limited Channel Web</strong><br>
-    11492 台北市瑞光路333號3樓及4樓<br>
-    <strong>Email</strong> <a href="mailto:snoop.yu@linebank.com.tw" style="color: #006fc9;">snoop.yu@linebank.com.tw</a>
+    <strong>Example Company / Example Team</strong><br>
+    123 Example Road, Example City<br>
+    <strong>Email</strong> <a href="mailto:your.name@example.com" style="color: #006fc9;">your.name@example.com</a>
   </p>
   <p style="margin: 0 0 14px 0;">
-    <img src="https://example.com/line-bank-logo.png" alt="LINE Bank" width="153" height="28" style="display: block; border: 0;">
+    <img src="https://example.com/company-logo.png" alt="Company logo" width="153" height="28" style="display: block; border: 0;">
   </p>
   <p style="margin: 0; color: #111; font-size: 12px;">
-    本電子郵件(包括任何附件)可能包含連線商業銀行股份有限公司機密資料及資訊，僅提供於特定目的之收件者。
+    This email and any attachments may contain privileged or confidential information intended only for the recipient.
     若您非本郵件指定之收件者，請立即回覆郵件以通知寄件者，並請永久刪除原始傳輸內容(包括任何附件)。
-    LINE Bank email and any attachments transmitted with it may contain privileged or confidential information of
-    LINE Bank Taiwan Limited, and intended solely for the use of the individual or entity to whom they are addressed.
+    If you are not the intended recipient, please notify the sender and delete this email and any copies.
   </p>
 </div>
 """
