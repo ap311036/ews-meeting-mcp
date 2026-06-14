@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 import unittest
 
-from ews_meeting_mcp.meeting import MeetingRequest, build_meeting_preview, render_body_for_format
+from ews_meeting_mcp.meeting import MeetingRequest, build_meeting_preview, normalize_recurrence, render_body_for_format
 
 
 class MeetingTests(unittest.TestCase):
@@ -50,6 +50,63 @@ class MeetingTests(unittest.TestCase):
         preview = build_meeting_preview(request, confirmed=False)
 
         self.assertEqual(preview["body_format"], "html")
+
+    def test_preview_includes_normalized_weekly_recurrence(self) -> None:
+        request = MeetingRequest(
+            subject="Project sync",
+            attendees=["eason.lin@example.com"],
+            start=datetime.fromisoformat("2026-06-15T11:00:00+08:00"),
+            end=datetime.fromisoformat("2026-06-15T11:30:00+08:00"),
+            recurrence={
+                "type": "weekly",
+                "interval": 1,
+                "weekdays": ["MO", "WE"],
+                "range": {"type": "end_date", "end_date": "2026-07-26"},
+            },
+        )
+
+        preview = build_meeting_preview(request, confirmed=False)
+
+        self.assertEqual(
+            preview["recurrence"],
+            {
+                "type": "weekly",
+                "interval": 1,
+                "weekdays": ["MO", "WE"],
+                "range": {"type": "end_date", "end_date": "2026-07-26"},
+            },
+        )
+
+    def test_business_days_are_weekdays_in_recurrence_payload(self) -> None:
+        recurrence = normalize_recurrence(
+            {
+                "type": "weekly",
+                "weekdays": ["MO", "TU", "WE", "TH", "FR"],
+                "range": {"type": "end_date", "end_date": "2026-07-26"},
+            }
+        )
+
+        self.assertEqual(recurrence["weekdays"], ["MO", "TU", "WE", "TH", "FR"])
+
+    def test_recurrence_rejects_invalid_values(self) -> None:
+        base = {
+            "type": "weekly",
+            "interval": 1,
+            "weekdays": ["MO"],
+            "range": {"type": "end_date", "end_date": "2026-07-26"},
+        }
+
+        for override in [
+            {"weekdays": []},
+            {"weekdays": ["XX"]},
+            {"interval": 0},
+            {"range": {}},
+            {"range": {"type": "end_date"}},
+        ]:
+            recurrence = {**base, **override}
+            with self.subTest(recurrence=recurrence):
+                with self.assertRaises(ValueError):
+                    normalize_recurrence(recurrence)
 
     def test_plain_text_body_renders_safe_html_with_links_and_line_breaks(self) -> None:
         rendered = render_body_for_format(

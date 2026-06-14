@@ -551,6 +551,23 @@ class McpServerTests(unittest.TestCase):
         self.assertEqual(update_body_format["default"], "html")
         self.assertEqual(update_body_format["enum"], ["html", "text"])
 
+    def test_create_meeting_schemas_expose_recurrence(self) -> None:
+        response = handle_request({"jsonrpc": "2.0", "id": 31, "method": "tools/list"})
+
+        tools = {tool["name"]: tool for tool in response["result"]["tools"]}
+        preview_recurrence = tools["ews_create_meeting_preview"]["inputSchema"]["properties"]["recurrence"]
+        confirmed_recurrence = tools["ews_create_meeting_confirmed"]["inputSchema"]["properties"]["recurrence"]
+
+        self.assertEqual(preview_recurrence["properties"]["type"]["enum"], ["weekly"])
+        self.assertEqual(preview_recurrence["properties"]["weekdays"]["items"]["enum"], ["MO", "TU", "WE", "TH", "FR", "SA", "SU"])
+        self.assertEqual(
+            preview_recurrence["properties"]["range"]["properties"]["type"]["enum"],
+            ["end_date", "numbered", "no_end"],
+        )
+        self.assertEqual(preview_recurrence, confirmed_recurrence)
+        self.assertNotIn("recurrence", tools["ews_update_meeting_preview"]["inputSchema"]["properties"])
+        self.assertNotIn("recurrence", tools["ews_cancel_meeting_preview"]["inputSchema"]["properties"])
+
     def test_update_confirmed_false_returns_structured_confirmation_error(self) -> None:
         response = handle_request(
             {

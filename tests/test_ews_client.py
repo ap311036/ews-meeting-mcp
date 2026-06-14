@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
+import sys
 from types import SimpleNamespace
+import types
 import unittest
+from unittest.mock import patch
 
 from ews_meeting_mcp.config import EwsConfig
-from ews_meeting_mcp.ews_client import EwsClient
+from ews_meeting_mcp.ews_client import EwsClient, _ews_recurrence, _recurrence_start
 from ews_meeting_mcp.errors import EwsToolError
 
 
@@ -539,6 +542,93 @@ class EwsClientResolveTests(unittest.TestCase):
         self.assertIn('<a href="https://wiki.example.com/prd/123">https://wiki.example.com/prd/123</a>', rendered)
         self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", rendered)
         self.assertNotIn("<script>", rendered)
+
+
+class FakeWeeklyPattern:
+    def __init__(self, **kwargs: object) -> None:
+        self.kwargs = kwargs
+
+
+class FakeRecurrence:
+    def __init__(self, **kwargs: object) -> None:
+        self.kwargs = kwargs
+
+
+class EwsClientRecurrenceTests(unittest.TestCase):
+    def test_recurrence_start_uses_configured_timezone_date(self) -> None:
+        self.assertEqual(
+            _recurrence_start(datetime.fromisoformat("2026-06-16T16:30:00+00:00"), "Asia/Taipei"),
+            date(2026, 6, 17),
+        )
+
+    def test_ews_recurrence_builds_weekly_end_date_pattern(self) -> None:
+        with fake_exchangelib_modules():
+            recurrence = _ews_recurrence(
+                {
+                    "type": "weekly",
+                    "interval": 1,
+                    "weekdays": ["MO", "WE"],
+                    "range": {"type": "end_date", "end_date": "2026-07-26"},
+                },
+                datetime.fromisoformat("2026-06-17T10:00:00+08:00"),
+            )
+
+        self.assertIsInstance(recurrence, FakeRecurrence)
+        self.assertEqual(recurrence.kwargs["start"], date(2026, 6, 17))
+        self.assertEqual(recurrence.kwargs["end"], date(2026, 7, 26))
+        pattern = recurrence.kwargs["pattern"]
+        self.assertIsInstance(pattern, FakeWeeklyPattern)
+        self.assertEqual(pattern.kwargs, {"interval": 1, "weekdays": ["Monday", "Wednesday"]})
+
+    def test_ews_recurrence_builds_numbered_and_no_end_ranges(self) -> None:
+        with fake_exchangelib_modules():
+            numbered = _ews_recurrence(
+                {
+                    "type": "weekly",
+                    "interval": 2,
+                    "weekdays": ["FR"],
+                    "range": {"type": "numbered", "count": 10},
+                },
+                datetime.fromisoformat("2026-06-19T10:00:00+08:00"),
+            )
+            no_end = _ews_recurrence(
+                {
+                    "type": "weekly",
+                    "interval": 1,
+                    "weekdays": ["MO", "TU", "WE", "TH", "FR"],
+                    "range": {"type": "no_end"},
+                },
+                datetime.fromisoformat("2026-07-01T09:30:00+08:00"),
+            )
+
+        self.assertEqual(numbered.kwargs["number"], 10)
+        self.assertEqual(numbered.kwargs["pattern"].kwargs["weekdays"], ["Friday"])
+        self.assertNotIn("end", no_end.kwargs)
+        self.assertNotIn("number", no_end.kwargs)
+        self.assertEqual(no_end.kwargs["pattern"].kwargs["weekdays"], ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
+
+
+def fake_exchangelib_modules() -> object:
+    exchangelib = types.ModuleType("exchangelib")
+    recurrence = types.ModuleType("exchangelib.recurrence")
+    fields = types.ModuleType("exchangelib.fields")
+    recurrence.Recurrence = FakeRecurrence
+    recurrence.WeeklyPattern = FakeWeeklyPattern
+    fields.MONDAY = "Monday"
+    fields.TUESDAY = "Tuesday"
+    fields.WEDNESDAY = "Wednesday"
+    fields.THURSDAY = "Thursday"
+    fields.FRIDAY = "Friday"
+    fields.SATURDAY = "Saturday"
+    fields.SUNDAY = "Sunday"
+    return patch.dict(
+        sys.modules,
+        {
+            "exchangelib": exchangelib,
+            "exchangelib.recurrence": recurrence,
+            "exchangelib.fields": fields,
+        },
+    )
 
 
 if __name__ == "__main__":

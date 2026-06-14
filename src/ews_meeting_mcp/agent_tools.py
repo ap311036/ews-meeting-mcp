@@ -10,7 +10,7 @@ from .config import EwsConfig, keychain_status, setup_check
 from .datetime_utils import parse_iso_datetime
 from .errors import EwsToolError
 from .ews_client import EwsClient, default_window
-from .meeting import MeetingRequest, build_meeting_preview
+from .meeting import MeetingRequest, build_meeting_preview, normalize_recurrence
 from .policy import load_policy
 from .scheduler import TimeBlock, overlaps, parse_time_range, suggest_slots
 
@@ -287,6 +287,7 @@ def ews_create_meeting_preview(
     body: str = "",
     body_format: str = "html",
     location: str = "",
+    recurrence: dict[str, Any] | None = None,
     client_factory: ClientFactory = default_client_factory,
 ) -> dict[str, Any]:
     arguments = {
@@ -298,6 +299,7 @@ def ews_create_meeting_preview(
         "body": body,
         "body_format": body_format,
         "location": location,
+        "recurrence": recurrence,
     }
     try:
         needs_client = _needs_resolution(attendees) or _rooms_need_resolution(rooms or [])
@@ -312,7 +314,17 @@ def ews_create_meeting_preview(
         room_emails = [room["email"] for room in room_infos]
         if not location and room_infos:
             location = room_infos[0]["name"]
-        request = _meeting_request(subject, attendees, room_emails, start, end, body, body_format, location)
+        request = _meeting_request(
+            subject,
+            attendees,
+            room_emails,
+            start,
+            end,
+            body,
+            body_format,
+            location,
+            recurrence=recurrence,
+        )
         preview = build_meeting_preview(request, confirmed=False)
         preview["confirmation_id"] = _confirmation_id("create_meeting", preview)
         warning = _record_lifecycle_audit(action="create_meeting", status="preview", arguments=arguments, result=preview)
@@ -339,6 +351,7 @@ def ews_create_meeting_confirmed(
     body: str = "",
     body_format: str = "html",
     location: str = "",
+    recurrence: dict[str, Any] | None = None,
     confirmation_id: str = "",
     confirm: bool = False,
     client_factory: ClientFactory = default_client_factory,
@@ -352,6 +365,7 @@ def ews_create_meeting_confirmed(
         "body": body,
         "body_format": body_format,
         "location": location,
+        "recurrence": recurrence,
         "confirmation_id": confirmation_id,
         "confirm": confirm,
     }
@@ -369,7 +383,17 @@ def ews_create_meeting_confirmed(
             room_emails = [room["email"] for room in room_infos]
             if not location and room_infos:
                 location = room_infos[0]["name"]
-            request = _meeting_request(subject, attendee_emails, room_emails, start, end, body, body_format, location)
+            request = _meeting_request(
+                subject,
+                attendee_emails,
+                room_emails,
+                start,
+                end,
+                body,
+                body_format,
+                location,
+                recurrence=recurrence,
+            )
             preview = build_meeting_preview(request, confirmed=False)
             preview["confirmation_id"] = _confirmation_id("create_meeting", preview)
             _require_confirmation_id(confirmation_id, str(preview["confirmation_id"]))
@@ -679,6 +703,8 @@ def _meeting_request(
     body: str,
     body_format: str,
     location: str,
+    *,
+    recurrence: dict[str, Any] | None = None,
 ) -> MeetingRequest:
     return MeetingRequest(
         subject=subject,
@@ -689,6 +715,7 @@ def _meeting_request(
         body=body,
         body_format=body_format,
         location=location,
+        recurrence=normalize_recurrence(recurrence) if recurrence is not None else None,
     )
 
 

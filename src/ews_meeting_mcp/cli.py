@@ -52,6 +52,38 @@ def main() -> None:
         action="store_true",
         help="Actually create the meeting and send invitations. Without this flag, only prints a preview.",
     )
+    create.add_argument(
+        "--recurrence-weekdays",
+        default="",
+        help="Comma-separated weekday codes for weekly recurrence, e.g. MO,WE.",
+    )
+    create.add_argument(
+        "--recurrence-business-days",
+        action="store_true",
+        help="Shortcut for weekly recurrence on MO,TU,WE,TH,FR.",
+    )
+    create.add_argument(
+        "--recurrence-interval",
+        type=int,
+        default=1,
+        help="Repeat every N weeks when recurrence weekdays are provided.",
+    )
+    recurrence_range = create.add_mutually_exclusive_group()
+    recurrence_range.add_argument(
+        "--recurrence-end-date",
+        default="",
+        help="End recurring meeting on YYYY-MM-DD.",
+    )
+    recurrence_range.add_argument(
+        "--recurrence-count",
+        type=int,
+        help="End recurring meeting after this many occurrences.",
+    )
+    recurrence_range.add_argument(
+        "--recurrence-no-end",
+        action="store_true",
+        help="Create a recurring meeting without an end date.",
+    )
 
     args = parser.parse_args()
     config = EwsConfig.from_env()
@@ -101,6 +133,7 @@ def main() -> None:
             end=end,
             body=args.body,
             location=args.location,
+            recurrence=_recurrence_from_args(args),
         )
         preview = build_meeting_preview(request, confirmed=args.confirm)
         if not args.confirm:
@@ -126,6 +159,36 @@ def _parse_window(args: argparse.Namespace) -> tuple[datetime, datetime]:
 
 def _parse_time(value: str) -> object:
     return datetime.strptime(value, "%H:%M").time()
+
+
+def _recurrence_from_args(args: argparse.Namespace) -> dict[str, object] | None:
+    weekdays: list[str] = []
+    if args.recurrence_business_days:
+        weekdays = ["MO", "TU", "WE", "TH", "FR"]
+    if args.recurrence_weekdays:
+        weekdays = [value.strip().upper() for value in args.recurrence_weekdays.split(",") if value.strip()]
+    if not weekdays:
+        if args.recurrence_end_date or args.recurrence_count is not None or args.recurrence_no_end:
+            raise SystemExit("Recurring meeting range flags require --recurrence-weekdays or --recurrence-business-days.")
+        return None
+
+    if args.recurrence_end_date:
+        recurrence_range: dict[str, object] = {"type": "end_date", "end_date": args.recurrence_end_date}
+    elif args.recurrence_count is not None:
+        recurrence_range = {"type": "numbered", "count": args.recurrence_count}
+    elif args.recurrence_no_end:
+        recurrence_range = {"type": "no_end"}
+    else:
+        raise SystemExit(
+            "Recurring meetings require --recurrence-end-date, --recurrence-count, or --recurrence-no-end."
+        )
+
+    return {
+        "type": "weekly",
+        "interval": args.recurrence_interval,
+        "weekdays": weekdays,
+        "range": recurrence_range,
+    }
 
 
 def _print(value: object) -> None:

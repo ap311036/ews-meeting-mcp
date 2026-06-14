@@ -69,6 +69,30 @@ User request
 
 For new meetings, call `ews_create_meeting_preview`, show the exact invite details and returned `confirmation_id`, then call `ews_create_meeting_confirmed` only after explicit user approval with `confirm: true` and the same `confirmation_id`.
 
+Recurring meetings are supported only during creation. Pass a structured `recurrence` object to both preview and confirmed create calls, and show the preview `recurrence` before asking for confirmation. Weekly Monday/Wednesday means:
+
+```json
+{
+  "type": "weekly",
+  "interval": 1,
+  "weekdays": ["MO", "WE"],
+  "range": {"type": "numbered", "count": 10}
+}
+```
+
+Business days mean Monday through Friday, without holiday or makeup-day handling. "Every business day until 7/26" means:
+
+```json
+{
+  "type": "weekly",
+  "interval": 1,
+  "weekdays": ["MO", "TU", "WE", "TH", "FR"],
+  "range": {"type": "end_date", "end_date": "2026-07-26"}
+}
+```
+
+If the user says only "every Monday and Wednesday" without an end date, occurrence count, or explicit no-end choice, ask for one before previewing.
+
 Confirmed create, update, and cancel operations are recorded in a small local confirmation ledger under `EWS_MEETING_MCP_STATE_DIR` when set, or the user's local state/cache directory otherwise. The older `EWS_MEETING_AGENT_STATE_DIR` name is still accepted for compatibility. The ledger stores operation metadata only, not passwords.
 
 If a confirmed tool returns `error_code: "duplicate_confirmation"`, treat the prior operation as already handled, inspect `prior_result`, and do not retry blindly.

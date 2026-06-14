@@ -42,7 +42,7 @@ This project wraps Exchange calendar operations in a small MCP surface with:
 | Read calendar availability | `ews_list_calendar`, `ews_get_free_busy`, `ews_find_calendar_events` | Read-only |
 | Resolve people and rooms | `ews_resolve_attendees`, `ews_list_rooms` | Uses Exchange directory when available |
 | Suggest slots | `ews_suggest_slots` | Applies local workday, avoid windows, and room capacity |
-| Create meetings | `ews_create_meeting_preview`, `ews_create_meeting_confirmed` | Requires preview, explicit approval, and matching confirmation id |
+| Create meetings | `ews_create_meeting_preview`, `ews_create_meeting_confirmed` | Supports optional weekly recurrence; requires preview, explicit approval, and matching confirmation id |
 | Update meetings | `ews_update_meeting_preview`, `ews_update_meeting_confirmed` | Requires exact EWS item metadata and matching confirmation id |
 | Cancel meetings | `ews_cancel_meeting_preview`, `ews_cancel_meeting_confirmed` | Requires exact EWS item metadata and matching confirmation id |
 | Verify and audit | `ews_verify_meeting`, `ews_get_audit_log` | Confirms server-side state without exposing credentials |
@@ -156,11 +156,41 @@ user request
 -> ews_suggest_slots
 -> user chooses a slot and room
 -> ews_create_meeting_preview
--> show exact invite details and confirmation_id
+-> show exact invite details, recurrence if present, and confirmation_id
 -> user explicitly confirms
 -> ews_create_meeting_confirmed with confirm=true and the same confirmation_id
 -> ews_verify_meeting, when item id and changekey are available
 ```
+
+Recurring meetings are created by passing a structured `recurrence` object to both preview and confirmed create calls. For example, "every Monday and Wednesday" uses weekly recurrence:
+
+```json
+{
+  "type": "weekly",
+  "interval": 1,
+  "weekdays": ["MO", "WE"],
+  "range": {
+    "type": "numbered",
+    "count": 10
+  }
+}
+```
+
+"Every business day until 7/26" means Monday through Friday, without holiday or makeup-day handling:
+
+```json
+{
+  "type": "weekly",
+  "interval": 1,
+  "weekdays": ["MO", "TU", "WE", "TH", "FR"],
+  "range": {
+    "type": "end_date",
+    "end_date": "2026-07-26"
+  }
+}
+```
+
+If the user asks only for weekdays such as "every Monday and Wednesday" without an end date, occurrence count, or explicit no-end choice, ask for one before previewing.
 
 Existing meeting changes should use exact calendar metadata:
 
