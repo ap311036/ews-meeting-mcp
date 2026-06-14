@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import re
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 from .config import EwsConfig
 from .datetime_utils import parse_iso_datetime
 from .errors import EwsToolError
-from .meeting import MeetingRequest, render_body_for_format
+from .meeting import MeetingRequest, normalize_recurrence, render_body_for_format
 from .scheduler import TimeBlock
 
 
@@ -206,17 +206,20 @@ class EwsClient:
         except ImportError:
             SEND_TO_ALL_AND_SAVE_COPY = "SendToAllAndSaveCopy"
 
-        item = CalendarItem(
-            account=self.account,
-            folder=self.account.calendar,
-            subject=request.subject,
-            body=_ews_body(render_body_for_format(request.body, request.body_format), request.body_format),
-            start=self._to_ews_datetime(request.start),
-            end=self._to_ews_datetime(request.end),
-            location=request.location,
-            required_attendees=request.attendees,
-            resources=request.rooms or [],
-        )
+        item_kwargs = {
+            "account": self.account,
+            "folder": self.account.calendar,
+            "subject": request.subject,
+            "body": _ews_body(render_body_for_format(request.body, request.body_format), request.body_format),
+            "start": self._to_ews_datetime(request.start),
+            "end": self._to_ews_datetime(request.end),
+            "location": request.location,
+            "required_attendees": request.attendees,
+            "resources": request.rooms or [],
+        }
+        if request.recurrence is not None:
+            item_kwargs["recurrence"] = _ews_recurrence(request.recurrence, _recurrence_start(request.start, self.config.timezone))
+        item = CalendarItem(**item_kwargs)
         item.save(send_meeting_invitations=SEND_TO_ALL_AND_SAVE_COPY)
 
         return {
@@ -542,6 +545,54 @@ def _ews_body(body: str, body_format: str) -> object:
             return body
         return HTMLBody(body)
     return body
+
+
+def _ews_recurrence(recurrence: dict[str, Any], start: datetime | date) -> Any:
+    try:
+        from exchangelib.recurrence import Recurrence, WeeklyPattern
+    except ImportError as exc:
+        raise RuntimeError(
+            "Missing dependency 'exchangelib'. Run: pip install -r requirements.txt"
+        ) from exc
+
+    normalized = normalize_recurrence(recurrence)
+    pattern = WeeklyPattern(
+        interval=normalized["interval"],
+        weekdays=[_ews_weekday(value) for value in normalized["weekdays"]],
+    )
+    range_config = normalized["range"]
+    kwargs: dict[str, Any] = {
+        "pattern": pattern,
+        "start": start if isinstance(start, date) and not isinstance(start, datetime) else start.date(),
+    }
+    if range_config["type"] == "end_date":
+        kwargs["end"] = date.fromisoformat(str(range_config["end_date"]))
+    elif range_config["type"] == "numbered":
+        kwargs["number"] = int(range_config["count"])
+    return Recurrence(**kwargs)
+
+
+def _recurrence_start(start: datetime, timezone_name: str) -> date:
+    if start.tzinfo is None:
+        return start.date()
+    return start.astimezone(ZoneInfo(timezone_name)).date()
+
+
+def _ews_weekday(value: str) -> Any:
+    try:
+        from exchangelib.fields import FRIDAY, MONDAY, SATURDAY, SUNDAY, THURSDAY, TUESDAY, WEDNESDAY
+    except ImportError:
+        from exchangelib.recurrence import FRIDAY, MONDAY, SATURDAY, SUNDAY, THURSDAY, TUESDAY, WEDNESDAY
+
+    return {
+        "MO": MONDAY,
+        "TU": TUESDAY,
+        "WE": WEDNESDAY,
+        "TH": THURSDAY,
+        "FR": FRIDAY,
+        "SA": SATURDAY,
+        "SU": SUNDAY,
+    }[value]
 
 
 def _resolution_to_match(resolution: Any) -> dict[str, str]:

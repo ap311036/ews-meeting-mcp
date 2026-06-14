@@ -19,9 +19,10 @@ Use the `ews-meeting-mcp` MCP tools to schedule meetings through an on-prem Exch
 7. If the user chooses specific rooms, pass the selected room `value`s or emails in `rooms` when calling `ews_suggest_slots`.
 8. Show suggested slots with their `available_rooms`. When asking the user to pick a slot or room, prefer the host's interactive multiple-choice UI or clickable choice controls when available; otherwise show a short numbered list. Omit `workday_start`, `workday_end`, and `avoid` to use local policy defaults.
 9. When the user picks a slot and room, call `ews_create_meeting_preview` with the selected room in `rooms`.
-10. Show the exact preview: attendees, rooms, start, end, subject, body, location, and `confirmation_id`.
-11. Only after the user explicitly confirms, call `ews_create_meeting_confirmed` with `confirm: true` and the exact `confirmation_id` returned by preview.
-12. After a successful confirmed create, call `ews_verify_meeting` with the returned item `id` and `changekey` when available, then report the organizer item status and room `response_status`. Treat `unknown` room response as pending/unknown, not as failure.
+10. For recurring meeting requests, pass a structured `recurrence` object to preview and confirmed create calls. Weekly Monday/Wednesday uses `{"type":"weekly","interval":1,"weekdays":["MO","WE"],"range":{"type":"numbered","count":10}}`. Every business day until 2026-07-26 uses `{"type":"weekly","interval":1,"weekdays":["MO","TU","WE","TH","FR"],"range":{"type":"end_date","end_date":"2026-07-26"}}`. Business days mean Monday through Friday only. If the user gives weekdays but no end date, occurrence count, or explicit no-end choice, ask for one before previewing.
+11. Show the exact preview: attendees, rooms, start, end, subject, body, location, recurrence if present, and `confirmation_id`.
+12. Only after the user explicitly confirms, call `ews_create_meeting_confirmed` with `confirm: true` and the exact `confirmation_id` returned by preview.
+13. After a successful confirmed create, call `ews_verify_meeting` with the returned item `id` and `changekey` when available, then report the organizer item status and room `response_status`. Treat `unknown` room response as pending/unknown, not as failure.
 
 ## Existing Meeting Lifecycle
 
@@ -55,6 +56,7 @@ Use the `ews-meeting-mcp` MCP tools to schedule meetings through an on-prem Exch
 - Use multiple attendee emails and candidate room aliases in one `ews_suggest_slots` call.
 - Use `require_room: true` when the user wants a room but does not specify which room.
 - To schedule with a room, pass the selected room in `rooms` to both preview and confirmed meeting tools. The room is sent as an Exchange resource, not as a required attendee.
+- To schedule a recurring meeting, use `recurrence.type: "weekly"` with weekday codes `MO`, `TU`, `WE`, `TH`, `FR`, `SA`, `SU`. Use `range.type: "end_date"`, `"numbered"`, or `"no_end"`; do not preview a recurrence until the range is explicit.
 - Meeting body defaults to `body_format: "html"`. You may turn a user-provided agenda into concise HTML, including clickable PRD/Wiki links. Plain text bodies are also accepted and are safely converted to HTML with line breaks and URL anchors.
 - Use `ews_get_free_busy` for diagnostics when slot suggestions look surprising.
 - Use `ews_list_calendar` to verify whether an event exists on the server calendar.

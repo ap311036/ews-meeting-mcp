@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 import html
 import re
+from typing import Any
 
 
 URL_RE = re.compile(r"https?://[^\s<>'\"]+")
+WEEKDAY_VALUES = ("MO", "TU", "WE", "TH", "FR", "SA", "SU")
 
 
 @dataclass(frozen=True)
@@ -19,6 +21,7 @@ class MeetingRequest:
     body_format: str = "html"
     location: str = ""
     rooms: list[str] | None = None
+    recurrence: dict[str, Any] | None = None
 
     def validate(self) -> None:
         if not self.subject.strip():
@@ -29,11 +32,13 @@ class MeetingRequest:
             raise ValueError("end must be after start")
         if self.body_format not in {"html", "text"}:
             raise ValueError("body_format must be html or text")
+        if self.recurrence is not None:
+            normalize_recurrence(self.recurrence)
 
 
 def build_meeting_preview(request: MeetingRequest, *, confirmed: bool) -> dict[str, object]:
     request.validate()
-    return {
+    preview: dict[str, object] = {
         "action": "create_meeting" if confirmed else "dry_run",
         "will_send_invites": confirmed,
         "subject": request.subject,
@@ -44,6 +49,71 @@ def build_meeting_preview(request: MeetingRequest, *, confirmed: bool) -> dict[s
         "location": request.location,
         "body": request.body,
         "body_format": request.body_format,
+    }
+    if request.recurrence is not None:
+        preview["recurrence"] = normalize_recurrence(request.recurrence)
+    return preview
+
+
+def normalize_recurrence(recurrence: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(recurrence, dict):
+        raise ValueError("recurrence must be an object")
+    recurrence_type = str(recurrence.get("type", "")).strip().lower()
+    if recurrence_type != "weekly":
+        raise ValueError("recurrence.type must be weekly")
+
+    try:
+        interval = int(recurrence.get("interval", 1))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("recurrence.interval must be an integer") from exc
+    if interval < 1:
+        raise ValueError("recurrence.interval must be at least 1")
+
+    weekdays = recurrence.get("weekdays")
+    if not isinstance(weekdays, list) or not weekdays:
+        raise ValueError("recurrence.weekdays must contain at least one weekday")
+    normalized_weekdays: list[str] = []
+    seen: set[str] = set()
+    for weekday in weekdays:
+        value = str(weekday).strip().upper()
+        if value not in WEEKDAY_VALUES:
+            raise ValueError("recurrence.weekdays must use MO, TU, WE, TH, FR, SA, or SU")
+        if value not in seen:
+            seen.add(value)
+            normalized_weekdays.append(value)
+
+    recurrence_range = recurrence.get("range")
+    if not isinstance(recurrence_range, dict):
+        raise ValueError("recurrence.range is required")
+    range_type = str(recurrence_range.get("type", "")).strip().lower()
+    normalized_range: dict[str, Any] = {"type": range_type}
+    if range_type == "end_date":
+        end_date = str(recurrence_range.get("end_date", "")).strip()
+        if not end_date:
+            raise ValueError("recurrence.range.end_date is required")
+        try:
+            date.fromisoformat(end_date)
+        except ValueError as exc:
+            raise ValueError("recurrence.range.end_date must be YYYY-MM-DD") from exc
+        normalized_range["end_date"] = end_date
+    elif range_type == "numbered":
+        try:
+            count = int(recurrence_range.get("count"))
+        except (TypeError, ValueError) as exc:
+            raise ValueError("recurrence.range.count must be an integer") from exc
+        if count < 1:
+            raise ValueError("recurrence.range.count must be at least 1")
+        normalized_range["count"] = count
+    elif range_type == "no_end":
+        pass
+    else:
+        raise ValueError("recurrence.range.type must be end_date, numbered, or no_end")
+
+    return {
+        "type": "weekly",
+        "interval": interval,
+        "weekdays": normalized_weekdays,
+        "range": normalized_range,
     }
 
 

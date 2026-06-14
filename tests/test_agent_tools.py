@@ -21,6 +21,7 @@ class FakeClient:
         self.free_busy_by_attendee_calls: list[list[str]] = []
         self.created_attendees: list[str] | None = None
         self.created_rooms: list[str] | None = None
+        self.created_recurrence: dict[str, object] | None = None
         self.fetched_events: list[tuple[str, str]] = []
         self.cancelled_events: list[tuple[str, str, bool]] = []
         self.updated_events: list[tuple[str, str, dict[str, object], list[str], bool, str]] = []
@@ -108,6 +109,7 @@ class FakeClient:
         self.created_meetings += 1
         self.created_attendees = request.attendees
         self.created_rooms = request.rooms
+        self.created_recurrence = request.recurrence
         return {"id": "event-1", "changekey": "ck-1"}
 
     def find_calendar_events(
@@ -471,6 +473,76 @@ class AgentToolTests(unittest.TestCase):
         )
 
         self.assertEqual(first["confirmation_id"], second["confirmation_id"])
+
+    def test_create_preview_includes_recurrence_in_confirmation_id(self) -> None:
+        weekly = {
+            "type": "weekly",
+            "interval": 1,
+            "weekdays": ["MO", "WE"],
+            "range": {"type": "end_date", "end_date": "2026-07-26"},
+        }
+        business_days = {
+            "type": "weekly",
+            "interval": 1,
+            "weekdays": ["MO", "TU", "WE", "TH", "FR"],
+            "range": {"type": "end_date", "end_date": "2026-07-26"},
+        }
+
+        first = agent_tools.ews_create_meeting_preview(
+            subject="Sync",
+            attendees=["ming.wang@example.com"],
+            start="2026-06-15T10:00:00+08:00",
+            end="2026-06-15T11:00:00+08:00",
+            recurrence=weekly,
+        )
+        second = agent_tools.ews_create_meeting_preview(
+            subject="Sync",
+            attendees=["ming.wang@example.com"],
+            start="2026-06-15T10:00:00+08:00",
+            end="2026-06-15T11:00:00+08:00",
+            recurrence=weekly,
+        )
+        changed = agent_tools.ews_create_meeting_preview(
+            subject="Sync",
+            attendees=["ming.wang@example.com"],
+            start="2026-06-15T10:00:00+08:00",
+            end="2026-06-15T11:00:00+08:00",
+            recurrence=business_days,
+        )
+
+        self.assertEqual(first["recurrence"]["weekdays"], ["MO", "WE"])
+        self.assertEqual(first["confirmation_id"], second["confirmation_id"])
+        self.assertNotEqual(first["confirmation_id"], changed["confirmation_id"])
+
+    def test_confirmed_create_passes_recurrence_to_client(self) -> None:
+        client = FakeClient()
+        recurrence = {
+            "type": "weekly",
+            "interval": 1,
+            "weekdays": ["MO", "TU", "WE", "TH", "FR"],
+            "range": {"type": "end_date", "end_date": "2026-07-26"},
+        }
+        preview = agent_tools.ews_create_meeting_preview(
+            subject="Daily standup",
+            attendees=["ming.wang@example.com"],
+            start="2026-07-01T09:30:00+08:00",
+            end="2026-07-01T10:00:00+08:00",
+            recurrence=recurrence,
+        )
+
+        result = agent_tools.ews_create_meeting_confirmed(
+            subject="Daily standup",
+            attendees=["ming.wang@example.com"],
+            start="2026-07-01T09:30:00+08:00",
+            end="2026-07-01T10:00:00+08:00",
+            recurrence=recurrence,
+            confirmation_id=str(preview["confirmation_id"]),
+            confirm=True,
+            client_factory=lambda: client,
+        )
+
+        self.assertEqual(result["preview"]["recurrence"], preview["recurrence"])
+        self.assertEqual(client.created_recurrence, preview["recurrence"])
 
     def test_create_preview_normalizes_email_whitespace_for_confirmation_id(self) -> None:
         client = FakeClient()

@@ -209,6 +209,33 @@ python -m ews_meeting_mcp.cli create-meeting \
 
 The `--confirm` flag is intentionally required. Without it, the command only prints a dry-run preview and does not call EWS to create the event.
 
+Preview a recurring meeting every Monday and Wednesday for 10 occurrences:
+
+```bash
+python -m ews_meeting_mcp.cli create-meeting \
+  --attendee alice@company.com \
+  --attendee bob@company.com \
+  --start 2026-06-17T10:00:00+08:00 \
+  --end 2026-06-17T10:30:00+08:00 \
+  --subject "Project sync" \
+  --recurrence-weekdays MO,WE \
+  --recurrence-count 10
+```
+
+Preview a recurring standup every business day until 2026-07-26. Business days mean Monday through Friday:
+
+```bash
+python -m ews_meeting_mcp.cli create-meeting \
+  --attendee alice@company.com \
+  --attendee bob@company.com \
+  --attendee carol@company.com \
+  --start 2026-07-01T09:30:00+08:00 \
+  --end 2026-07-01T10:00:00+08:00 \
+  --subject "Standup" \
+  --recurrence-business-days \
+  --recurrence-end-date 2026-07-26
+```
+
 ## MCP Server
 
 This package includes a dependency-light stdio MCP server:

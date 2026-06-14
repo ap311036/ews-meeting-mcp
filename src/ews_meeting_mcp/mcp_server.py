@@ -99,8 +99,11 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
                     "prefer the host's interactive multiple-choice UI or clickable choice controls when "
                     "available; otherwise show a short numbered list and wait for the user's selection. "
                     "Use ews_suggest_slots with resolved email addresses and candidate rooms when a room "
-                    "is needed. Before sending invitations, show the preview from "
-                    "ews_create_meeting_preview and ask the user to confirm, then pass the same "
+                    "is needed. For recurring meetings, pass a structured recurrence object to the create "
+                    "preview/confirmed tools, show the recurrence from preview, and ask for an explicit "
+                    "end date, occurrence count, or no-end choice when the user only gives weekdays. "
+                    "Treat business days as Monday through Friday. Before sending invitations, show the preview from "
+                    "ews_create_meeting_preview, including recurrence if present, and ask the user to confirm, then pass the same "
                     "confirmation_id to ews_create_meeting_confirmed. For existing meetings, "
                     "use ews_find_calendar_events, preview update/cancel actions, then call the matching "
                     "confirmed tool only with confirm=true and the returned confirmation_id. After confirmed "
@@ -171,6 +174,7 @@ def _meeting_schema(*, include_confirm: bool) -> dict[str, Any]:
             "description": "Meeting body format. Defaults to html; plain text input is safely converted to HTML.",
         },
         "location": {"type": "string", "default": ""},
+        "recurrence": _recurrence_schema(),
     }
     required = ["subject", "attendees", "start", "end"]
     if include_confirm:
@@ -187,6 +191,59 @@ def _meeting_schema(*, include_confirm: bool) -> dict[str, Any]:
         "type": "object",
         "properties": properties,
         "required": required,
+        "additionalProperties": False,
+    }
+
+
+def _recurrence_schema() -> dict[str, Any]:
+    weekday_enum = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
+    return {
+        "type": "object",
+        "description": (
+            "Optional recurrence for creating a weekly recurring meeting. "
+            "For business days, use weekdays MO,TU,WE,TH,FR. "
+            "If omitted, the meeting is created once."
+        ),
+        "properties": {
+            "type": {
+                "type": "string",
+                "enum": ["weekly"],
+                "description": "Only weekly recurrence is supported in this version.",
+            },
+            "interval": {
+                "type": "integer",
+                "default": 1,
+                "minimum": 1,
+                "description": "Repeat every N weeks.",
+            },
+            "weekdays": {
+                "type": "array",
+                "items": {"type": "string", "enum": weekday_enum},
+                "minItems": 1,
+                "description": "Weekdays for the recurrence, such as MO and WE.",
+            },
+            "range": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "enum": ["end_date", "numbered", "no_end"],
+                    },
+                    "end_date": {
+                        "type": "string",
+                        "description": "YYYY-MM-DD. Required when range.type is end_date.",
+                    },
+                    "count": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Occurrence count. Required when range.type is numbered.",
+                    },
+                },
+                "required": ["type"],
+                "additionalProperties": False,
+            },
+        },
+        "required": ["type", "weekdays", "range"],
         "additionalProperties": False,
     }
 
